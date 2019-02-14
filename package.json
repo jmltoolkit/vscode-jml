@@ -1,0 +1,30 @@
+{
+    "name": "jml-vscode",
+    "displayName": "jml-vscode",
+    "description": "VS Code support for Java Modelling Language",
+    "version": "0.1.0",
+    "publisher": "wadoon",
+    "engines": {
+        "vscode": "^1.30.0"
+    },
+    "repository": {
+        "url": "http://github.com/wadoon/jml-vscode",
+        "type": "git"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "java",
+            "aliases": ["Java+JML", "java"],
+            "extensions": [".java"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "java",
+            "scopeName": "source.java",
+            "path": "./syntaxes/java.tmLanguage.json"
+        }]
+    }
+}
