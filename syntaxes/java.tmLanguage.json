@@ -561,6 +561,23 @@
 					}]
 				},
 				{
+					"begin": "\\b(model|ghost)\\b",
+					"end": "[;|\n]",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.jml"
+						}
+					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
+						}
+					},
+					"patterns": [{
+						"include": "#code"
+					}]
+				},
+				{
 					"match": "\\b(spec_)?(public|private|protected)\\b",
 					"name": "keyword.jml.modifier"
 				},
