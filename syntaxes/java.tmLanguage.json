@@ -543,7 +543,45 @@
 					}]
 				},
 				{
-					"begin": "\\b(diverges|decreases|measures_by|(loop_)?invariant)\\b",
+					"begin": "\\bassignable\\b",
+					"end": ";",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.jml.clause.assignable"
+						}
+					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
+						}
+					},
+					"name": "jml.clause.assignable",
+					"patterns": [{
+						"include": "#comment-jml-expr"
+					}]
+				},
+				{
+					"begin": "\\baccessible\\b",
+					"end": ";",
+					"beginCaptures": {
+						"0": {
+							"name": "keyword.jml.clause.accessible"
+						}
+					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
+						}
+					},
+					"name": "jml.clause.accessible",
+					"patterns": [
+						{
+							"include": "#comment-jml-expr"
+						}
+					]
+				},
+				{
+					"begin": "\\b(diverges|decreases|decreasing|measures_by|(loop_)?invariant)|maintaining\\b",
 					"end": ";",
 					"beginCaptures": {
 						"0": {
