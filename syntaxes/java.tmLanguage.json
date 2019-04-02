@@ -543,7 +543,7 @@
 					}]
 				},
 				{
-					"begin": "\\b(diverges|measures_by|(loop_)?invariant)\\b",
+					"begin": "\\b(diverges|decreases|measures_by|(loop_)?invariant)\\b",
 					"end": ";",
 					"beginCaptures": {
 						"0": {
