@@ -499,6 +499,9 @@
 						}
 					},
 					"name": "jml.clause.ensures",
+					"endCaptures": {
+						"0": {"name": "punctuation.terminator.java"}
+					},
 					"patterns": [{
 						"include": "#comment-jml-expr"
 					}]
@@ -509,6 +512,11 @@
 					"beginCaptures": {
 						"0": {
 							"name": "keyword.jml.clause.requires"
+						}
+					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
 						}
 					},
 					"name": "jml.clause.requires",
@@ -524,6 +532,11 @@
 							"name": "keyword.jml.clause.assignable"
 						}
 					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
+						}
+					},
 					"name": "jml.clause.assignable",
 					"patterns": [{
 						"include": "#comment-jml-expr"
@@ -535,6 +548,11 @@
 					"beginCaptures": {
 						"0": {
 							"name": "keyword.jml.clause"
+						}
+					},
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.terminator.java"
 						}
 					},
 					"name": "jml.clause",
