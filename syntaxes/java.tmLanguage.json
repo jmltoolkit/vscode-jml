@@ -649,6 +649,54 @@
 					"match": "\\\\dl_[a-zA-Z_0-9]+",
 					"name": "keyword.other.jml.keydl"
 				},
+				
+				{
+					"include": "#jml-keywords-call"
+				},
+				{
+					"include": "#jml-keywords"
+				},
+				{
+					"include": "#code"
+				}
+			]
+		},
+		"jml-keywords-call": {
+			"patterns": [
+				{
+					"begin": "(\\\\)(invariant_for|singleton|old|seq_concat)\\s*(\\()",
+					"beginCaptures": {
+						"1": {
+							"name": "entity.name.function.java"
+						},
+						"2": {
+							"name": "entity.name.function.java"
+						},
+						"3": {
+							"name": "punctuation.definition.parameters.begin.bracket.round.java"
+						}
+					},
+					"end": "\\)",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.parameters.end.bracket.round.java"
+						}
+					},
+					"name": "meta.function-call.java",
+					"patterns": [
+						{
+							"include": "#comment-jml-expr"
+						}
+					]
+				}
+			]
+		},
+		"jml-keywords": {
+			"patterns": [
+				{
+					"match": "\\\\(nothing|strictly_nothing|empty|everything|index)",
+					"name": "constant.language.jml"
+				},
 				{
 					"match": "\\\\[a-zA-Z_][a-zA-Z_0-9]*",
 					"name": "keyword.other.jml.escaped"
