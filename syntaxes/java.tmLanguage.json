@@ -588,6 +588,10 @@
 				{
 					"match": "\\b(normal|exceptional)_behaviou?r\\b",
 					"name": "keyword.jml.behavior"
+				},
+				{
+					"match": "\\b(pure|strictly_pure|helper|model|nullable_by_default)\\b",
+					"name": "keyword.jml.modifier"
 				}
 			]
 		},
