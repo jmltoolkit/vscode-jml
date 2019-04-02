@@ -625,7 +625,7 @@
 					"name": "constant.other"
 				},
 				{
-					"match": "\\b(normal|exceptional)_behaviou?r\\b",
+					"match": "\\b((normal|exceptional|break|continue|return)_)?behaviou?r\\b",
 					"name": "keyword.jml.behavior"
 				},
 				{
