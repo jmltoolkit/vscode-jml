@@ -114,6 +114,9 @@
 					"include": "#primitive-types"
 				},
 				{
+					"include": "#jml-types"
+				},
+				{
 					"include": "#object-types"
 				}
 			]
@@ -1404,8 +1407,18 @@
 			}]
 		},
 		"primitive-types": {
-			"match": "\\b(void|boolean|byte|char|short|int|float|long|double)\\b",
-			"name": "storage.type.primitive.java"
+			"patterns": [{
+				"match": "\\b(void|boolean|byte|char|short|int|float|long|double)\\b",
+				"name": "storage.type.primitive.java"
+			}]
+		},
+		"jml-types": {
+			"patterns": [
+				{
+					"match": "\\\\(locset|seq|bigint)",
+					"name": "storage.type.primitive.jml"
+				}
+			]
 		},
 		"properties": {
 			"patterns": [{
