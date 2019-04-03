@@ -12,7 +12,7 @@ VS Code extension for supporting the Java Modelling Language.
 * **0.2.0** (04.04.2019)
   - Fixes by @csicar
 
-* **0.1.0** ()
+* **0.1.0** (14.02.2019)
   - First release
 
 * **0.0.0** (unpublished)
