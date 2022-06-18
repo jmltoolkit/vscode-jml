@@ -2,7 +2,7 @@
     "name": "jml-vscode",
     "displayName": "jml-vscode",
     "description": "VS Code support for Java Modelling Language",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "publisher": "wadoon",
     "engines": {
         "vscode": "^1.30.0"
@@ -15,16 +15,41 @@
         "Programming Languages"
     ],
     "contributes": {
-        "languages": [{
-            "id": "java",
-            "aliases": ["Java+JML", "java"],
-            "extensions": [".java"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "java",
-            "scopeName": "source.java",
-            "path": "./syntaxes/java.tmLanguage.json"
-        }]
+        "languages": [
+            {
+                "id": "java",
+                "aliases": [
+                    "Java+JML",
+                    "java"
+                ],
+                "extensions": [
+                    ".java"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "java",
+                "scopeName": "source.java",
+                "path": "./syntaxes/java.tmLanguage.json"
+            }
+        ]
+    },
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onLanguage:java"
+    ],
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "lint": "tslint -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^7.10.14",
+        "@types/vscode": "^1.52.0",
+        "tslint": "^5.20.1",
+        "typescript": "^3.9.7"
     }
 }

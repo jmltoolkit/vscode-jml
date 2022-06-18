@@ -6,6 +6,12 @@ VS Code extension for supporting the Java Modelling Language.
 
 * Syntax highlighting of JML contracts
 
+## TODO
+
+* Use existing libraries for linting of JML
+  * Add support for OpenJML 
+  * Add support for KeY
+
 ## Changelog
 
 
