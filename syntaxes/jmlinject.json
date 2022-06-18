@@ -1,0 +1,265 @@
+{
+    "scopeName": "jml-comment.injection",
+    "injectionSelector": "L:comment.block.java",
+    "patterns": [
+        {
+            "include": "#comment-jml"
+        }
+    ],
+    "repository": {
+		"comment-jml": {
+			"patterns": [{
+					"begin": "([+-]\\w+)*@",
+					"captures": {
+						"0": {
+							"name": "punctuation.definition.comment.java.jml"
+						}
+					},
+					"end": "\\*/",
+					"name": "comment.block.java.jml",
+					"patterns": [{
+						"include": "#comment-jml-clause"
+					}]
+				}				
+			]
+		},
+        "comment-jml-clause": {
+            "patterns": [
+                {
+                    "begin": "//",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.java"
+                        }
+                    },
+                    "end": "\\n",
+                    "name": "comment.line.double-slash.java"
+                },
+                {
+                    "begin": "\\b(ensures)(_free|_redundantly)?\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause.ensures"
+                        }
+                    },
+                    "name": "jml.clause.ensures",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(requires)(_free|_redundantly)?\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause.requires"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "name": "jml.clause.requires",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\bassignable\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause.assignable"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "name": "jml.clause.assignable",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\bassignable\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause.assignable"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "name": "jml.clause.assignable",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\baccessible\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause.accessible"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "name": "jml.clause.accessible",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(diverges|decreases|decreasing|measures_by|(loop_)?invariant)|maintaining\\b",
+                    "end": ";",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml.clause"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "name": "jml.clause",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(model|ghost) *(two_state|no_state)?\\b",
+                    "end": "[;|\n]",
+                    "name": "jml.definition",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.jml"
+                        }
+                    },
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.terminator.java"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#code"
+                        }
+                    ]
+                },
+                {
+                    "match": "\\b(spec_)?(public|private|protected)\\b",
+                    "name": "keyword.jml.modifier"
+                },
+                {
+                    "match": ";",
+                    "name": "constant.other"
+                },
+                {
+                    "match": "\\b((normal|exceptional|break|continue|return)_)?behaviou?r\\b",
+                    "name": "keyword.jml.behavior"
+                },
+                {
+                    "match": "\\b(pure|strictly_pure|helper|model|nullable_by_default)\\b",
+                    "name": "keyword.jml.modifier"
+                }
+            ]
+        },
+        "comment-jml-expr": {
+            "patterns": [
+                {
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                },
+                {
+                    "match": "\\\\dl_[a-zA-Z_0-9]+",
+                    "name": "keyword.other.jml.keydl"
+                },
+                {
+                    "include": "#jml-keywords-call"
+                },
+                {
+                    "include": "#jml-keywords"
+                },
+                {
+                    "include": "#code"
+                }
+            ]
+        },
+        "jml-keywords-call": {
+            "patterns": [
+                {
+                    "begin": "(\\\\)(invariant_for|singleton|old|seq_concat)\\s*(\\()",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.java"
+                        },
+                        "2": {
+                            "name": "entity.name.function.java"
+                        },
+                        "3": {
+                            "name": "punctuation.definition.parameters.begin.bracket.round.java"
+                        }
+                    },
+                    "end": "\\)",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.parameters.end.bracket.round.java"
+                        }
+                    },
+                    "name": "meta.function-call.java",
+                    "patterns": [
+                        {
+                            "include": "#comment-jml-expr"
+                        }
+                    ]
+                }
+            ]
+        },
+        "jml-keywords": {
+            "patterns": [
+                {
+                    "match": "\\\\(nothing|strictly_nothing|empty|everything|index)",
+                    "name": "constant.language.jml"
+                },
+                {
+                    "match": "\\\\[a-zA-Z_][a-zA-Z_0-9]*",
+                    "name": "keyword.other.jml.escaped"
+                }
+            ]
+        }
+    }
+}
