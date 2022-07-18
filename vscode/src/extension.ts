@@ -10,11 +10,17 @@ import { workspace, Disposable, ExtensionContext, window } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, StreamInfo } from 'vscode-languageclient/node';
 
 export function activate(context: ExtensionContext) {
-    activateSemanticTokensProvider();
-    activateLanguageServer();
+	context.subscriptions.push(
+		activateSemanticTokensProvider()
+	);
+
+	context.subscriptions.push(
+		//activateLanguageServer(context)
+	);
+
 }
 
-function activateLanguageServer() {
+function activateLanguageServer(context: ExtensionContext): Disposable {
 	function createServer(): Promise<StreamInfo> {
 		return new Promise((resolve, reject) => {
 			var server = net.createServer((socket) => {
@@ -38,8 +44,8 @@ function activateLanguageServer() {
 					// Start the child java process
 					let options = { cwd: workspace.rootPath };
 
-					let args : string[] = [
-						'-jar', jarFile, "--client", (server.address() as net.AddressInfo).port.toString()
+					let args: string[] = [
+						'-jar', jarFile, "--client", server.address().port.toString()
 					];
 
 					console.log("Starting OpenJML: " + javaExecutablePath + " " + args);
@@ -81,10 +87,7 @@ function activateLanguageServer() {
 	// Create the language client and start the client.
 	let client = new LanguageClient('openjml', 'OpenJML support', createServer, clientOptions);
 	let disposable = client.start();
-
-	// Push the disposable to the context's subscriptions so that the 
-	// client can be deactivated on extension deactivation
-	context.subscriptions.push(client);
+	return client;
 }
 
 // MIT Licensed code from: https://github.com/georgewfraser/vscode-javac

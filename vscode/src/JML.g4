@@ -4,6 +4,17 @@ tokens {
 	JML_INFORMAL
 }
 
+JML_SET_KEY: '//-*- jml-keys: ' (IDENTIFIER ([ ,]+ IDENTIFIER)*)?;
+
+fragment JML_START: (('+' | '-') IDENTIFIER)*;
+fragment JML_COMMENT_ML: '/*' JML_START '@' .*? '*/';
+fragment JML_SINGLE_LINE: '//' JML_START '@' ~('\n' | '\r')*;
+JML_COMMENT: JML_COMMENT_ML | JML_SINGLE_LINE;
+
+IGNORE: . -> skip;
+
+mode jmlMode;
+
 // Modifiers with occur in Java and are always highlighted.
 JAVA_MODIFIERS:
 	'abstract'
