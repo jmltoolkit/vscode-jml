@@ -45,7 +45,7 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 					let options = { cwd: workspace.rootPath };
 
 					let args: string[] = [
-						'-jar', jarFile, "--client", server.address().port.toString()
+						'-jar', jarFile, "--client", (server.address() as net.AddressInfo).port.toString()
 					];
 
 					console.log("Starting OpenJML: " + javaExecutablePath + " " + args);

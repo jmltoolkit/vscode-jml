@@ -2,3 +2,4 @@ node_modules
 src/JML.interop
 src/JML.tokens
 out/
+dist/
