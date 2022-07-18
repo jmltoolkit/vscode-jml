@@ -14,7 +14,7 @@
     "categories": [
         "Programming Languages"
     ],
-    "contributes": {        
+    "contributes": {
         "semanticTokenScopes": [
             {
                 "id": "jmlmodifier",
@@ -37,20 +37,29 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
-        "lint": "tslint -p ./",
         "watch": "tsc -watch -p ./",
-        "antlr4ts": "antlr4ts src/JML.g4"
+        "antlr4ts": "antlr4ts src/JML.g4",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
     },
     "devDependencies": {
         "@types/antlr4": "^4.7.2",
-        "@types/node": "^7.10.14",
-        "@types/vscode": "^1.68.0",
+        "@types/vscode": "^1.69.0",
         "antlr4ts-cli": "^0.5.0-alpha.4",
-        "tslint": "^5.20.1",
-        "typescript": "^3.9.10"
+        "typescript": "^3.9.10",
+        "@types/glob": "^7.2.0",
+        "@types/mocha": "^9.1.1",
+        "@types/node": "16.x",
+        "@typescript-eslint/eslint-plugin": "^5.30.0",
+        "@typescript-eslint/parser": "^5.30.0",
+        "eslint": "^8.18.0",
+        "glob": "^8.0.3",
+        "mocha": "^10.0.0"
     },
     "dependencies": {
         "antlr4": "^4.10.1",
-        "antlr4ts": "^0.5.0-alpha.4"
+        "antlr4ts": "^0.5.0-alpha.4",
+        "vscode-languageclient": "^8.0.1"
     }
 }

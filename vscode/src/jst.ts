@@ -117,6 +117,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 };
 
 export function activateSemanticTokensProvider() {
-  const selector = { language: 'java', scheme: 'file' }; // register for all Java documents from the local file system
+  // register for all Java documents from the local file system
+  const selector = { language: 'java', scheme: 'file' };   
   vscode.languages.registerDocumentSemanticTokensProvider(selector, provider, legend);
 }
