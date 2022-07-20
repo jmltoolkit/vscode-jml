@@ -8,7 +8,7 @@ public class Example {
     public int foo = 2;
 
     /*@
-    model_behavior test :
+    model_behavior
     requires true;
     ensures true;
     assignable \nothing;

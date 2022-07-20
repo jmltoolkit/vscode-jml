@@ -3,11 +3,20 @@
 import * as fs from "fs";
 import * as path from 'path';
 import * as net from 'net';
+import * as http from 'http';
 import * as child_process from "child_process";
 import * as vscode from 'vscode';
 import { activateSemanticTokensProvider } from './jst'
 import { workspace, Disposable, ExtensionContext, window } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, StreamInfo } from 'vscode-languageclient/node';
+
+
+import { globby } from 'globby';
+import { resolve } from "path";
+import { createNoSubstitutionTemplateLiteral } from "typescript";
+
+
+
 
 export function activate(context: ExtensionContext) {
 	context.subscriptions.push(
@@ -15,12 +24,14 @@ export function activate(context: ExtensionContext) {
 	);
 
 	context.subscriptions.push(
-		//activateLanguageServer(context)
+		activateLanguageServer(context)
 	);
 
 }
 
 function activateLanguageServer(context: ExtensionContext): Disposable {
+	const output = window.createOutputChannel("JML language server")
+
 	function createServer(): Promise<StreamInfo> {
 		return new Promise((resolve, reject) => {
 			var server = net.createServer((socket) => {
@@ -45,10 +56,11 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 					let options = { cwd: workspace.rootPath };
 
 					let args: string[] = [
-						'-jar', jarFile, "--client", (server.address() as net.AddressInfo).port.toString()
+						'-jar', jarFile, "--mode", "client",
+						"--port", (server.address() as net.AddressInfo).port.toString()
 					];
 
-					console.log("Starting OpenJML: " + javaExecutablePath + " " + args);
+					console.log("Starting JML: " + javaExecutablePath + " " + args);
 
 					let process = child_process.spawn(javaExecutablePath, args, options);
 
@@ -58,15 +70,17 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 						fs.mkdirSync(context.storageUri?.fsPath);
 					}
 
-					let logFile = context.storagePath + '/vscode-languageserver-java-example.log';
-					let logStream = fs.createWriteStream(logFile, { flags: 'w' });
+					process.stdout.on("data", chunk => output.append(chunk.toString()))
+					process.stderr.on("data", chunk => output.append(chunk.toString()))
 
+					/*let logFile = storagePath + '/vscode-languageserver-java-example.log';
+					let logStream = fs.createWriteStream(logFile, { flags: 'w' });
 					if (process) {
 						process.stdout.pipe(logStream);
 						process.stderr.pipe(logStream);
-					}
+					}*/
 
-					console.log(`Storing log in '${logFile}'`);
+					//console.log(`Storing log in '${logFile}'`);
 				});
 			});
 		});
@@ -78,7 +92,7 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 		documentSelector: ['java'],
 		synchronize: {
 			// Synchronize the setting section 'languageServerExample' to the server
-			configurationSection: 'openjml',
+			configurationSection: 'jml',
 			// Notify the server about file changes to '.clientrc files contain in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/*.{java,jml}')
 		}
@@ -87,6 +101,7 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 	// Create the language client and start the client.
 	let client = new LanguageClient('openjml', 'OpenJML support', createServer, clientOptions);
 	let disposable = client.start();
+	context.subscriptions.push(output)
 	return client;
 }
 
@@ -128,37 +143,103 @@ function findJavaExecutable(): string {
 
 async function findJar(context: ExtensionContext): Promise<string> {
 	let config = workspace.getConfiguration('openjml');
-	let userDefined = path.resolve(config.get("jarFile") || "openjml-lsp-1.0-all.jar");
+	const storagePath = context.storageUri?.fsPath;
 
-	if (fs.existsSync(userDefined)) {
-		return userDefined;
+
+	const potentialPaths: string[] = [
+		path.join(config.get("jarFile") || "-not-found"),
+		path.join(context.extensionPath,
+			'..', 'lsp', 'build', 'libs', 'jml-lsp-*-all.jar'),
+		path.join(storagePath, "lsp", "jml-lsp-*-all.jar"),
+		path.join("${env.HOME}", ".jml-lsp", "jml-lsp-*-all.jar")
+	]
+
+	for (const candidate of potentialPaths) {
+		const paths = await globby(candidate);
+		if (paths.length > 0) {
+			return paths[0]
+		}
 	}
 
-	const localDevMode =
-		path.resolve(context.extensionPath,
-			'..', 'server', 'build', 'libs', 'openjml-lsp-1.0-SNAPSHOT-all.jar');
-
-	if (fs.existsSync(localDevMode)) {
-		return localDevMode;
-	}
-
-	const globallyInstalled =
-		path.resolve("${env.HOME}", ".openjml-lsp", "openjml-lsp-1.0-SNAPSHOT-all.jar");
-
-	if (fs.existsSync(globallyInstalled)) {
-		return localDevMode;
-	}
-
-	const locallyInstalled = await workspace.findFiles("**/openjml-lsp-*-all.jar");
-
+	const locallyInstalled = await workspace.findFiles("**/jml-lsp-*-all.jar");
 	if (locallyInstalled) {
 		return locallyInstalled[0].fsPath;
 	}
 
-	window.showErrorMessage("Could not find openjml-lsp jar file.");
-
-	return path.resolve("openjml-lsp.jar");
+	return downloadLanguageServer(storagePath)
 }
+
+async function downloadLanguageServer(storagePath: string): Promise<string> {
+	let progress: vscode.Progress<any> | undefined;
+	let cancel: vscode.CancellationToken | undefined;
+	let dest: string | undefined
+	let done: Function | false | undefined;
+
+	const request = http.get("https://github.com", function (response) {
+		if (response.statusCode == 200) {
+			dest = path.join(storagePath, "lsp", response.headers["content-disposition"])
+			if (cancel) {
+				cancel.onCancellationRequested(() => {
+					if (request.destroyed || response.destroyed) return;
+					request.destroy();
+					response.destroy();
+				});
+			} else {
+				console.error("failed registering cancel token");
+			}
+
+			let len = parseInt(response.headers["content-length"] || "0")
+			let totalPercent: number = 0;
+			response.addListener("data", (chunk) => {
+				let increment = chunk.length / len;
+				totalPercent += increment;
+				if (progress)
+					progress.report({
+						message: `Downloaded ${(totalPercent * 100).toFixed(2)}%`,
+						increment: increment * 100
+					});
+			})
+
+			const file = fs.createWriteStream(path.resolve())
+			response.pipe(file, { end: true });
+			// after download completed close filestream
+			file.on("end", () => {
+				file.close();
+				console.log("Download Completed");
+			});
+
+			response.on('error', error => {
+				file.close()
+				window.showErrorMessage("Download error " + error.message)
+				console.log(error)
+			})
+		}
+	}).on('error', function (err) { // Handle errors
+		if (dest) fs.unlink(dest, (err) => { });
+		//if (cb) cb(err.message);
+	});
+
+	vscode.window.withProgress({
+		cancellable: true,
+		location: vscode.ProgressLocation.Notification,
+		title: "Downloading jml language server"
+	}, (_progress, _cancel) => {
+		progress = _progress;
+		cancel = _cancel;
+		return new Promise((resolve) => {
+			if (done === false)
+				return resolve(undefined);
+			done = resolve;
+		});
+	});
+
+
+	return "";
+}
+
+
+
+
 
 function correctBinname(binname: string) {
 	if (process.platform === 'win32') {
@@ -168,4 +249,5 @@ function correctBinname(binname: string) {
 		return binname;
 	}
 }
+
 

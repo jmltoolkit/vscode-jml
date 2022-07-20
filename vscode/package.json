@@ -27,7 +27,8 @@
             {
                 "id": "jmlmodifier",
                 "superType": "other",
-                "description": "JML Modifier"
+                "description": "JML Modifier",
+                "scopes": {}
             },
             {
                 "scopes": {
@@ -46,7 +47,7 @@
         "vscode:prepublish": "npm run esbuild-base -- --minify",
         "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
         "esbuild": "npm run esbuild-base -- --sourcemap",
-        "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",        
+        "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
@@ -70,6 +71,8 @@
         "vscode-languageclient": "^8.0.2"
     },
     "dependencies": {
-        "antlr4ts": "^0.5.0-alpha.4"
+        "antlr4ts": "^0.5.0-alpha.4",
+        "axios": "^0.27.2",
+        "globby": "^13.1.2"
     }
 }

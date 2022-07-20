@@ -156,7 +156,7 @@ function analyzeJmlToken(
         type = 'number'; break;
       case JML.COMMENT: type = 'comment'; break;
       default:
-        console.log(token, toplevel, lexer.vocabulary.getDisplayName(token.type))
+        //console.log(token, toplevel, lexer.vocabulary.getDisplayName(token.type))
         continue;
     }
 
@@ -181,7 +181,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 
     for (const token of lexer.getAllTokens()) {
       if (token.type == JML.JML_SET_KEY) {
-        console.log(token)
+        //console.log(token)
         conditionalChecker.setKeysFromToken(token)
         continue
       }
