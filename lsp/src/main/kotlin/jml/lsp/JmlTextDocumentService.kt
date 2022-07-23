@@ -3,9 +3,11 @@ package jml.lsp
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ParseResult
 import com.github.javaparser.ParserConfiguration
-import com.github.javaparser.TokenRange
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.body.*
+import com.github.javaparser.ast.expr.NameExpr
+import com.github.javaparser.resolution.declarations.AssociableToAST
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver
@@ -24,17 +26,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import kotlin.io.path.readText
 
-private val com.github.javaparser.Position.asPosition: Position
-    get() = Position(line - 1, column - 1)
-
-private val Optional<TokenRange>.asRange: Range
-    get() =
-        if (isPresent) {
-            val r = get().toRange().get()
-            Range(r.begin.asPosition, r.end.asPosition)
-        } else {
-            Range()
-        }
 
 class AstRepository(val server: JmlLanguageServer, val executorService: ExecutorService) {
     private val sourceFolders = Collections.synchronizedList(arrayListOf<Path>())
@@ -48,7 +39,8 @@ class AstRepository(val server: JmlLanguageServer, val executorService: Executor
     val typeSolver: TypeSolver
         get() {
             synchronized(sourceFolders) {
-                val elements = sourceFolders.asSequence().map { JavaParserTypeSolver(it) as TypeSolver }.toMutableList()
+                val elements: MutableList<TypeSolver> =
+                    sourceFolders.asSequence().map { JavaParserTypeSolver(it) }.toMutableList()
                 val classLoaderTypeSolver = ClassLoaderTypeSolver(ClassLoader.getSystemClassLoader())
                 elements.add(0, classLoaderTypeSolver)
                 return CombinedTypeSolver(elements)
@@ -101,16 +93,19 @@ class AstRepository(val server: JmlLanguageServer, val executorService: Executor
             }
             cached[path] = result
             if (result.isSuccessful && result.result.isPresent) {
-                server.client?.showMessage(MessageParams(MessageType.Log, "$path parsed"))
+                server.client.showMessage(MessageParams(MessageType.Log, "$path parsed"))
             } else {
+                /*
                 val diagnostics = result.problems.map {
                     if (it.cause.isPresent)
-                        Logger.error("Found exception in errors:", it.cause.get())
-                    Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
+                        Logger.error("Found exception in errors: {}", it.cause.get())
+                    val d = Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
+                    d
                 }
-                server.client?.publishDiagnostics(
+                server.client.publishDiagnostics(
                     PublishDiagnosticsParams(path.value, diagnostics)
                 )
+                */
             }
         }
     }
@@ -122,7 +117,7 @@ class AstRepository(val server: JmlLanguageServer, val executorService: Executor
     fun addSourceFolder(folder: Path) {
         if (folder !in sourceFolders) {
             sourceFolders.add(folder)
-            updateTypeSolver();
+            updateTypeSolver()
         }
     }
 
@@ -163,7 +158,7 @@ value class Uri(val value: String) {
         get() = File(localFilePath)
 }
 
-class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocumentService {
+class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
     val repo = AstRepository(server, server.executorService)
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
@@ -171,12 +166,10 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
         Logger.info(params.textDocument.languageId)
         if (params.textDocument.languageId != "text/java")
             return
-        val path = Uri(params.textDocument.uri)
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         Logger.info("didChange: {}", params)
-        val path = Uri(params.textDocument.uri).path
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {
@@ -185,7 +178,6 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
 
     override fun didSave(params: DidSaveTextDocumentParams) {
         Logger.info("didSave: {}", params)
-        val path = Uri(params.textDocument.uri).path
     }
 
     override fun completion(position: CompletionParams?): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
@@ -196,16 +188,73 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
         return super.resolveCompletionItem(unresolved)
     }
 
-    override fun hover(params: HoverParams?): CompletableFuture<Hover> {
-        return super.hover(params)
+    override fun hover(params: HoverParams): CompletableFuture<Hover?> {
+        return repo.get(Uri(params.textDocument.uri))
+            .thenApplyAsync { findSymbol(params.position, it) }
+            .thenApplyAsync {
+                if (it == null) null
+                else
+                    Hover(
+                        MarkupContent(
+                            "markdown",
+                            "Hover message for name: ${it.nameAsString}"
+                        )
+                    )
+            }
     }
 
-    override fun signatureHelp(params: SignatureHelpParams?): CompletableFuture<SignatureHelp> {
-        return super.signatureHelp(params)
+    override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp> {
+        /*val path = Uri(params.textDocument.uri)
+        val pos = params.position
+        val active =
+            params.context.activeSignatureHelp.signatures[params.context.activeSignatureHelp.activeSignature]
+         */
+        return CompletableFuture.supplyAsync {
+            SignatureHelp()
+        }
     }
 
-    override fun declaration(params: DeclarationParams?): CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
-        return super.declaration(params)
+    override fun declaration(params: DeclarationParams)
+            : CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
+        val uri = Uri(params.textDocument.uri)
+        return repo.get(uri)
+            .thenApplyAsync { findSymbol(params.position, it) }
+            .thenApplyAsync { resolveSymbolInDocument(it) }
+    }
+
+    private fun resolveSymbolInDocument(nameExpr: NameExpr?)
+            : Either<MutableList<out Location>, MutableList<out LocationLink>> {
+        if (nameExpr != null) {
+            val r = nameExpr.resolve()
+            if (r is AssociableToAST<*> && r.toAst().isPresent) {
+                val ast = r.toAst().get()
+                val targetUri = "file://${ast.findCompilationUnit().get().storage.get().path.toFile()}"
+                val targetRange = ast.asRange
+                val targetSelectionRange = targetRange
+                // TODO be more specific dependening targeted type
+                arrayListOf(LocationLink(targetUri, targetRange, targetSelectionRange))
+            }
+        }
+        return Either.forLeft(arrayListOf())
+    }
+
+    private fun findSymbol(position: Position, it: ParseResult<CompilationUnit>): NameExpr? {
+        if (!it.result.isPresent) return null
+        var current: Node = it.result.get()
+        val pos = com.github.javaparser.Position(position.line, position.character)
+
+        next@ while (current.range.get().contains(pos)) {
+            if (current is NameExpr)
+                return current
+
+            for (child in current.childNodes) {
+                if (child.range.get().contains(pos)) {
+                    current = child
+                    continue@next
+                }
+            }
+        }
+        return null
     }
 
     override fun definition(params: DefinitionParams?): CompletableFuture<Either<MutableList<out Location>, MutableList<out LocationLink>>> {
@@ -229,13 +278,29 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
         return CompletableFuture.completedFuture(arrayListOf())
     }
 
-    override fun documentSymbol(params: DocumentSymbolParams?): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
-        return super.documentSymbol(params)
+    override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
+        Logger.info("params: {}", params)
+        val uri = Uri(params.textDocument.uri)
+        return repo.get(uri).thenApply {
+            Logger.info("Parse: {}", it)
+            if (!it.result.isPresent) mutableListOf()
+            else resolveSymbol(it.result.get())
+        }
+    }
+
+    private fun resolveSymbol(compilationUnit: CompilationUnit)
+            : MutableList<Either<SymbolInformation, DocumentSymbol>> {
+        Logger.info("Resolve symbols for compiluation unit: {}", compilationUnit.storage.get().path)
+        val visitor = CatchSymbols()
+        val a = compilationUnit.accept(visitor, null) ?: arrayListOf()
+        Logger.info("Symbols caught: {}", a.size)
+        val b = a.map { Either.forRight<SymbolInformation, DocumentSymbol>(it) }
+        return b.toMutableList()
     }
 
     override fun codeAction(params: CodeActionParams): CompletableFuture<MutableList<Either<Command, CodeAction>>> {
         Logger.info("codeAction: {}", params)
-        return CompletableFuture.completedFuture(arrayListOf())
+        return repo.get(Uri(params.textDocument.uri)).applyOn(CodeActionCollector(params.context), arrayListOf())
     }
 
     override fun resolveCodeAction(unresolved: CodeAction?): CompletableFuture<CodeAction> {
@@ -244,7 +309,7 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
 
     override fun codeLens(params: CodeLensParams): CompletableFuture<MutableList<out CodeLens>> {
         Logger.info("codeLens: {}", params)
-        return CompletableFuture.completedFuture(mutableListOf())
+        return repo.get(Uri(params.textDocument.uri)).applyOn(CodeLensCollector(), arrayListOf())
     }
 
     override fun resolveCodeLens(unresolved: CodeLens): CompletableFuture<CodeLens> {
@@ -368,4 +433,13 @@ class JmlTextDocumentService(private val server: JmlLanguageServer) : TextDocume
             DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(it))
         }
     }
+}
+
+private fun <T> CompletableFuture<ParseResult<CompilationUnit>>.applyOn(collector: ResultingVisitor<T>, default: T)
+        : CompletableFuture<T> = this.thenApplyAsync {
+    if (it.result.isPresent) {
+        it.result.get().accept(collector, null)
+        collector.result
+    } else
+        default
 }
