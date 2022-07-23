@@ -7,13 +7,13 @@ import * as http from 'http';
 import * as child_process from "child_process";
 import * as vscode from 'vscode';
 import { activateSemanticTokensProvider } from './jst'
+import { activateKeyLangage } from './keylang'
 import { workspace, Disposable, ExtensionContext, window } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, StreamInfo } from 'vscode-languageclient/node';
 
 
 import { globby } from 'globby';
 import { resolve } from "path";
-import { createNoSubstitutionTemplateLiteral } from "typescript";
 
 
 
@@ -27,6 +27,7 @@ export function activate(context: ExtensionContext) {
 		activateLanguageServer(context)
 	);
 
+	activateKeyLangage(context)
 }
 
 function activateLanguageServer(context: ExtensionContext): Disposable {
