@@ -1,20 +1,22 @@
-# jml-vscode 
+# vscode-jml 
 
-VS Code extension for supporting the Java Modelling Language.
+VS Code extension for supporting the Java Modeling Language.
 
-## Features
+**Features**
+This 
 
 * Syntax highlighting of JML contracts
 
 ## TODO
 
-* Use existing libraries for linting of JML
-  * Add support for OpenJML 
-  * Add support for KeY
+* Make the language server available and downloadable on the fly.
 
 ## Changelog
 
-
+* **0.3.0** (upcoming-2022)
+  - Changing to `SemanticTokenProvider` interface to highlight JML annotation texts
+  - preparation for using a language server for more language support
+  
 * **0.2.0** (04.04.2019)
   - Fixes by @csicar
 
@@ -22,7 +24,7 @@ VS Code extension for supporting the Java Modelling Language.
   - First release
 
 * **0.0.0** (unpublished)
-  - Start with the `java` language definition of VS Code. 
+  - Start with the `java` language definition of VS Code.
 
 ## Authors
 

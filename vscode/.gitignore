@@ -1,5 +1,6 @@
 node_modules
-src/JML.interop
-src/JML.tokens
+src/*.interp
+src/*.tokens
+src/.antlr/
 out/
 dist/
