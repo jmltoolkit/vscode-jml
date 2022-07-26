@@ -2,10 +2,22 @@
 
 VS Code extension for supporting the Java Modeling Language.
 
-**Features**
-This 
+Available at [open-vsx.org](https://open-vsx.org/extension/wadoon/jml-vscode) and [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=wadoon.jml-vscode)
 
-* Syntax highlighting of JML contracts
+
+**Features**
+
+* Syntax highlighting of JML contracts. 
+ 
+  The highlighting is sensitive to the JML conditions. You set the current
+  active keys by a comment `//-*- jml-keys: ...`.
+
+* [Language server for JML](lsp/)
+  
+* Support for KeY files
+
+  Syntax highlighting and snippets.
+
 
 ## TODO
 
