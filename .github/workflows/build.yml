@@ -18,8 +18,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
-      - run: cd vscode
       - name: Install dependencies
-        run: npm install
+        run: cd vscode && npm install
       - name: Build
-        run: npm run compile
+        run: cd vscode && npm run compile
