@@ -20,15 +20,19 @@
         "languages": [
             {
                 "id": "key",
-                "extensions": [".key"],
-                "aliases": ["KeY"],
-                "filenames": [],                
+                "extensions": [
+                    ".key"
+                ],
+                "aliases": [
+                    "KeY"
+                ],
+                "filenames": [],
                 "configuration": "./key-language-configuration.json",
                 "icon": {
-                  "light": "./icons/key-light.png",
-                  "dark": "./icons/key-dark.png"
+                    "light": "./icons/key-light.png",
+                    "dark": "./icons/key-dark.png"
                 }
-              }
+            }
         ],
         "snippets": [
             {
@@ -58,7 +62,7 @@
     },
     "main": "./dist/extension.js",
     "activationEvents": [
-        "onLanguage:java", 
+        "onLanguage:java",
         "onLanguage:key"
     ],
     "scripts": {
@@ -90,7 +94,7 @@
     },
     "dependencies": {
         "antlr4ts": "^0.5.0-alpha.4",
-        "axios": "^0.27.2",
-        "globby": "^13.1.2"
+        "globby": "^13.1.2",
+        "got": "^12.3.0"        
     }
 }
