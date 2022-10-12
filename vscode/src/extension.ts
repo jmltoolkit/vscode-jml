@@ -14,6 +14,8 @@ import { LanguageClient, LanguageClientOptions, SettingMonitor, StreamInfo } fro
 
 import { globby } from 'globby';
 import { resolve } from "path";
+import { ServerDownloader } from "./serverDownloader";
+import { config } from "process";
 
 
 
@@ -23,11 +25,14 @@ export function activate(context: ExtensionContext) {
 		activateSemanticTokensProvider()
 	);
 
-	context.subscriptions.push(
-		activateLanguageServer(context)
-	);
-
 	activateKeyLangage(context)
+
+	const config = workspace.getConfiguration("jml")
+	if (config.get("lspDisabled") !== true) {
+		context.subscriptions.push(
+			activateLanguageServer(context)
+		);
+	}
 }
 
 function activateLanguageServer(context: ExtensionContext): Disposable {
@@ -146,7 +151,7 @@ async function findJar(context: ExtensionContext): Promise<string> {
 	let config = workspace.getConfiguration('openjml');
 	const storagePath = context.storageUri?.fsPath;
 
-
+	// a list of local installation paths
 	const potentialPaths: string[] = [
 		path.join(config.get("jarFile") || "-not-found"),
 		path.join(context.extensionPath,
@@ -157,17 +162,20 @@ async function findJar(context: ExtensionContext): Promise<string> {
 
 	for (const candidate of potentialPaths) {
 		const paths = await globby(candidate);
-		if (paths.length > 0) {
+		if (paths.length > 0 && false) {
 			return paths[0]
 		}
 	}
 
 	const locallyInstalled = await workspace.findFiles("**/jml-lsp-*-all.jar");
-	if (locallyInstalled) {
+	if (locallyInstalled && false) {
 		return locallyInstalled[0].fsPath;
 	}
 
-	return downloadLanguageServer(storagePath)
+
+	const installDir = path.join(storagePath, 'lsp')
+	const downloader = new ServerDownloader("JML language server", "vscode-jml", /.*\.jar/, installDir)
+	return await downloader.downloadServerIfNeeded()
 }
 
 

@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
+import kotlin.collections.ArrayDeque
 import kotlin.io.path.readText
 
 
@@ -51,6 +52,7 @@ class AstRepository(val server: JmlLanguageServer, val executorService: Executor
         get() = JavaSymbolSolver(typeSolver)
 
     init {
+        config.setSymbolResolver(symbolSolver)
         config.isProcessJml = true
     }
 
@@ -232,16 +234,30 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
                 val targetRange = ast.asRange
                 val targetSelectionRange = targetRange
                 // TODO be more specific dependening targeted type
-                arrayListOf(LocationLink(targetUri, targetRange, targetSelectionRange))
+                return Either.forRight(arrayListOf(LocationLink(targetUri, targetRange, targetSelectionRange)))
             }
         }
         return Either.forLeft(arrayListOf())
     }
 
     private fun findSymbol(position: Position, it: ParseResult<CompilationUnit>): NameExpr? {
+        if (!it.isSuccessful) return null
+        val p = position.toJavaParser()
+        val queue: Queue<Node> = LinkedList()
+        queue.add(it.result.get())
+        while (queue.isNotEmpty()) {
+            val n = queue.poll()
+            if (n.range.get().contains(p) && n is NameExpr)
+                return n
+            queue.addAll(n.childNodes)
+        }
+        return null
+    }
+
+    private fun findSymbolByRange(position: Position, it: ParseResult<CompilationUnit>): NameExpr? {
         if (!it.result.isPresent) return null
         var current: Node = it.result.get()
-        val pos = com.github.javaparser.Position(position.line, position.character)
+        val pos = position.toJavaParser()
 
         next@ while (current.range.get().contains(pos)) {
             if (current is NameExpr)
@@ -365,10 +381,6 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
         return super.foldingRange(params)
     }
 
-    override fun prepareRename(params: PrepareRenameParams?): CompletableFuture<Either<Range, PrepareRenameResult>> {
-        return super.prepareRename(params)
-    }
-
     override fun prepareTypeHierarchy(params: TypeHierarchyPrepareParams?): CompletableFuture<MutableList<TypeHierarchyItem>> {
         return super.prepareTypeHierarchy(params)
     }
@@ -434,6 +446,8 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
         }
     }
 }
+
+private fun Position.toJavaParser() = com.github.javaparser.Position(line , character )
 
 private fun <T> CompletableFuture<ParseResult<CompilationUnit>>.applyOn(collector: ResultingVisitor<T>, default: T)
         : CompletableFuture<T> = this.thenApplyAsync {

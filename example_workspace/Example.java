@@ -9,7 +9,7 @@ public class Example {
 
     /*@
     model_behavior
-    requires true;
+    requires req1 : true;
     ensures true;
     assignable \nothing;
     public model int bar(int a);

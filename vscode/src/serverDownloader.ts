@@ -107,10 +107,10 @@ async function fsExists(path: fs.PathLike): Promise<boolean> {
 export class ServerDownloader {
     private displayName: string;
     private githubProjectName: string;
-    private assetName: string;
+    private assetName: RegExp;
     private installDir: string;
 
-    constructor(displayName: string, githubProjectName: string, assetName: string, installDir: string) {
+    constructor(displayName: string, githubProjectName: string, assetName: RegExp, installDir: string) {
         this.displayName = displayName;
         this.githubProjectName = githubProjectName;
         this.installDir = installDir;
@@ -163,7 +163,7 @@ export class ServerDownloader {
         });
     }
 
-    async downloadServerIfNeeded(): Promise<void> {
+    async downloadServerIfNeeded(): Promise<string> {
         const serverInfo = await this.installedServerInfo();
         const serverInfoOrDefault = serverInfo || { version: "0.0.0", lastUpdate: Number.MIN_SAFE_INTEGER };
         const secondsSinceLastUpdate = (Date.now() - serverInfoOrDefault.lastUpdate) / 1000;
@@ -205,12 +205,14 @@ export class ServerDownloader {
                         version: newVersion,
                         lastUpdate: Date.now(),
                         filename: serverAsset.name
-                    });
+                    });                    
+                    return path.join(this.installDir, serverAsset.name)
                 } else {
                     throw new Error(`Latest GitHub release for ${this.githubProjectName} does not contain the asset with pattern '${this.assetName}'!`);
                 }
             }
-        }
+        } 
+        return path.join(this.installDir, serverInfo.filename)
     }
 }
 

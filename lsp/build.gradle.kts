@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.7.20"
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("application")
 }
@@ -16,7 +16,7 @@ repositories {
     }
 }
 
-group = "org.example"
+group = "io.wadoon.jmlparser.lsp"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -25,18 +25,18 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("org.tinylog:tinylog-api-kotlin:2.5.0-M2.1")
+    implementation("org.tinylog:tinylog-api-kotlin:2.5.0")
     implementation("org.tinylog:tinylog-api:2.5.0-M2.1")
-    implementation("org.tinylog:tinylog-impl:2.5.0-M2.1")
-    implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.14.0")
+    implementation("org.tinylog:tinylog-impl:2.5.0")
+    implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.15.0")
     implementation("com.github.ajalt.clikt:clikt:3.5.0")
 
-
-    implementation("org.key:jmlparser-symbol-solver-core:3.24.3-SNAPSHOT")
+    implementation("io.github.wadoon:jmlparser-symbol-solver-core:3.24.7-SNAPSHOT")
+    implementation("io.github.wadoon:jmlparser-jml-tools:3.24.7-SNAPSHOT")
 
     testImplementation("com.google.truth:truth:1.1.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
 }
 
 tasks.test {
@@ -44,7 +44,7 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "17"
 }
 
 application {
