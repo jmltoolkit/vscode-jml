@@ -1,4 +1,5 @@
 import com.google.common.truth.Truth
+import jml.lsp.DocumentationIndex
 import jml.lsp.JmlLanguageServer
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.LanguageClient
@@ -41,10 +42,34 @@ val languageServer = JmlLanguageServer().also {
 val docService = languageServer.textDocumentService
 
 class HoverTest {
+
+    @Test
+    fun docIndex() {
+        val idx = DocumentationIndex()
+        val mbtext = idx.get("model_behavior")
+        val btext = idx.get("behavior")
+        Truth.assertThat(mbtext).isEqualTo(btext)
+    }
+
     @Test
     fun test1(): Unit {
-        val params = HoverParams()
-        //docService.hover(params)
+        val file = TextDocumentIdentifier(File(workspace, "Example.java").toUri)
+        val params = HoverParams(file, Position(12, 10)) // requires
+        val resp = docService.hover(params).get()
+        println(resp.range)
+        println(resp.contents.right.value)
+    }
+}
+
+class FileDiagnosticTests {
+    @Test
+    fun test1() {
+        val file = TextDocumentIdentifier(File(workspace, "Errors.java").toUri)
+        val params = DocumentDiagnosticParams(file)
+        val resp = docService.diagnostic(params).get()
+        resp.left.items.forEach {
+            println(it.message)
+        }
     }
 }
 

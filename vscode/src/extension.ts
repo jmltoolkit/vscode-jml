@@ -162,7 +162,7 @@ async function findJar(context: ExtensionContext): Promise<string> {
 
 	for (const candidate of potentialPaths) {
 		const paths = await globby(candidate);
-		if (paths.length > 0 && false) {
+		if (paths.length > 0) {
 			return paths[0]
 		}
 	}

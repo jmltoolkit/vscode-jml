@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.services.WorkspaceService
 import org.tinylog.kotlin.Logger
 import java.util.concurrent.CompletableFuture
 
-class JmlWorkspaceService(jmlLanguageServer: JmlLanguageServer) : WorkspaceService {
+class JmlWorkspaceService(val jmlLanguageServer: JmlLanguageServer) : WorkspaceService {
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
         Logger.info("didChangeConfiguration {}", params)
     }
@@ -15,8 +15,11 @@ class JmlWorkspaceService(jmlLanguageServer: JmlLanguageServer) : WorkspaceServi
         Logger.info("didChangeWatchedFiles {}", params)
     }
 
-    override fun executeCommand(params: ExecuteCommandParams?): CompletableFuture<Any> {
-        return super.executeCommand(params)
+    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> {
+        Logger.info("executeCommand {}", params)
+        return jmlLanguageServer.actions.find { it.id == params.command }
+            ?.execute(jmlLanguageServer, params.arguments)
+            ?: CompletableFuture.completedFuture("")
     }
 
     override fun symbol(params: WorkspaceSymbolParams?): CompletableFuture<Either<MutableList<out SymbolInformation>, MutableList<out WorkspaceSymbol>>> {

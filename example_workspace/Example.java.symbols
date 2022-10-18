@@ -1,0 +1,8 @@
+ Example.java	Interface	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:3:14
+> Example	Class	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:3:14
+>> anon invariant	Property	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:6:9
+>> foo	Field	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:8:16
+>> bar	Method	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:15:22
+>>> model_behavior	Key	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:12:5
+>>>> req1 : REQUIRES	EnumMember	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:12:5
+>>>> Clause ENSURES	EnumMember	file:///home/weigl/work/vscode-jml/lsp/../example_workspace/Example.java:13:5

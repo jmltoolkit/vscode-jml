@@ -2,6 +2,7 @@ package jml.lsp
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.*
+import java.util.ServiceLoader
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ForkJoinPool
@@ -16,7 +17,13 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
     lateinit var client: LanguageClient
     internal var capabilities: ClientCapabilities? = null
     internal var workspaceFolders: List<WorkspaceFolder>? = null
+    internal val jmlNotebookDocumentServices by lazy { JmlNotebookDocumentServices() }
 
+    internal val actions by lazy {
+        ServiceLoader.load(LspAction::class.java).toList()
+    }
+
+    override fun getNotebookDocumentService(): NotebookDocumentService = jmlNotebookDocumentServices
 
     override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult> {
         if (params != null) {
@@ -24,22 +31,25 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
             capabilities = params.capabilities
         }
 
-        val capabilities = ServerCapabilities()
-        capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
-        capabilities.diagnosticProvider = DiagnosticRegistrationOptions(true, false)
-        capabilities.setCodeActionProvider(true)
-        // capabilities.setColorProvider(false)
-        capabilities.setDocumentSymbolProvider(true)
-        capabilities.setWorkspaceSymbolProvider(true)
-        capabilities.setDeclarationProvider(DeclarationRegistrationOptions("JML"))
-        capabilities.signatureHelpProvider = SignatureHelpOptions()
-        capabilities.setHoverProvider(true)
-        //capabilities.setDefinitionProvider(true)
-        //capabilities.setDocumentHighlightProvider(true)
-        capabilities.codeLensProvider = CodeLensOptions(true)
-        //capabilities.completionProvider = CompletionOptions(true, null)
+        return CompletableFuture.supplyAsync {
+            val capabilities = ServerCapabilities()
+            capabilities.setTextDocumentSync(TextDocumentSyncKind.Full)
+            capabilities.diagnosticProvider = DiagnosticRegistrationOptions(true, false)
+            capabilities.setDocumentSymbolProvider(true)
+            capabilities.setWorkspaceSymbolProvider(true)
+            capabilities.setDeclarationProvider(DeclarationRegistrationOptions("JML"))
+            capabilities.signatureHelpProvider = SignatureHelpOptions()
+            capabilities.setHoverProvider(true)
+            capabilities.codeLensProvider = CodeLensOptions(true)
+            capabilities.setSelectionRangeProvider(true)
 
-        return CompletableFuture.completedFuture(InitializeResult(capabilities))
+            //capabilities.setDefinitionProvider(true)
+            //capabilities.setDocumentHighlightProvider(true)
+            //capabilities.completionProvider = CompletionOptions(true, null)
+
+            capabilities.setCodeActionProvider(CodeActionOptions(actions.map { it.id }))
+            return@supplyAsync InitializeResult(capabilities)
+        }
     }
 
     override fun shutdown(): CompletableFuture<Any> {
@@ -48,6 +58,7 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
     }
 
     override fun exit() {
+        shutdown()
         exitProcess(0)
     }
 

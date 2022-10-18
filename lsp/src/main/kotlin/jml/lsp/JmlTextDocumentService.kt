@@ -4,8 +4,8 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ParseResult
 import com.github.javaparser.ParserConfiguration
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.Jmlish
 import com.github.javaparser.ast.Node
-import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.expr.NameExpr
 import com.github.javaparser.resolution.declarations.AssociableToAST
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
@@ -13,6 +13,8 @@ import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.jmlparser.lint.JmlLintingConfig
+import com.github.jmlparser.lint.JmlLintingFacade
 import com.google.common.hash.Hashing.crc32
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -23,12 +25,18 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutorService
-import kotlin.collections.ArrayDeque
 import kotlin.io.path.readText
 
 
-class AstRepository(val server: JmlLanguageServer, val executorService: ExecutorService) {
+private val Node?.parentalSelectionRange: SelectionRange?
+    get() = when {
+        this == null -> null
+        !this.parentNode.isPresent -> SelectionRange(asRange, null)
+        else -> SelectionRange(asRange, parentNode.get().parentalSelectionRange)
+    }
+
+
+class AstRepository(val server: JmlLanguageServer) {
     private val sourceFolders = Collections.synchronizedList(arrayListOf<Path>())
 
     val config: ParserConfiguration = ParserConfiguration()
@@ -133,9 +141,14 @@ class AstRepository(val server: JmlLanguageServer, val executorService: Executor
 
     fun getDiagnostics(path: Uri): CompletableFuture<MutableList<Diagnostic>> =
         get(path).thenApply { result ->
-            result.problems.map {
-                Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
-            }.toMutableList()
+            if (result.isSuccessful)
+                JmlLintingFacade.lint(JmlLintingConfig(), listOf(result.result.get())).map {
+                    Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jml-lint")
+                }.toMutableList()
+            else
+                result.problems.map {
+                    Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
+                }.toMutableList()
         }
 
     fun get(path: Uri): CompletableFuture<ParseResult<CompilationUnit>> {
@@ -161,7 +174,7 @@ value class Uri(val value: String) {
 }
 
 class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
-    val repo = AstRepository(server, server.executorService)
+    val repo = AstRepository(server)
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         Logger.info("didOpen: {}", params)
@@ -192,18 +205,37 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
 
     override fun hover(params: HoverParams): CompletableFuture<Hover?> {
         return repo.get(Uri(params.textDocument.uri))
-            .thenApplyAsync { findSymbol(params.position, it) }
             .thenApplyAsync {
-                if (it == null) null
+                val symbol = findSymbol(params.position, it)
+                if (symbol == null)
+                    findKeyword(params, it)
                 else
                     Hover(
                         MarkupContent(
                             "markdown",
-                            "Hover message for name: ${it.nameAsString}"
+                            "Hover message for name: ${symbol.nameAsString}"
                         )
                     )
             }
     }
+
+    private fun findKeyword(params: HoverParams, cu: ParseResult<CompilationUnit>): Hover? {
+        val node = findTopMostJmlishNode(params.position, cu)
+        if (node != null) {
+            val tokenRange = node.tokenRange.get()
+            val pos = params.position.asPosition
+            val javaToken = tokenRange.find { it.range.get().contains(pos) }
+            return javaToken?.text?.let { retrieveDocumentation(it) }
+        }
+        return null
+    }
+
+
+    private val documentationIndex by lazy { DocumentationIndex() }
+
+    private fun retrieveDocumentation(tokenText: String): Hover? =
+        documentationIndex.get(tokenText)
+            ?.let { text -> Hover(MarkupContent("markdown", text)) }
 
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp> {
         /*val path = Uri(params.textDocument.uri)
@@ -316,7 +348,9 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
 
     override fun codeAction(params: CodeActionParams): CompletableFuture<MutableList<Either<Command, CodeAction>>> {
         Logger.info("codeAction: {}", params)
-        return repo.get(Uri(params.textDocument.uri)).applyOn(CodeActionCollector(params.context), arrayListOf())
+
+        return repo.get(Uri(params.textDocument.uri))
+            .applyOn(CodeActionCollector(params.context, params.range.asRange), arrayListOf())
     }
 
     override fun resolveCodeAction(unresolved: CodeAction?): CompletableFuture<CodeAction> {
@@ -405,9 +439,37 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
         return super.callHierarchyOutgoingCalls(params)
     }
 
-    override fun selectionRange(params: SelectionRangeParams?): CompletableFuture<MutableList<SelectionRange>> {
-        return super.selectionRange(params)
+    private fun findTopMostJmlishNode(position: Position, cu: ParseResult<CompilationUnit>): Node? =
+        findNode(position, cu) {
+            it is Jmlish
+        }
+
+
+    private fun findNode(
+        position: Position,
+        it: ParseResult<CompilationUnit>,
+        pred: (Node) -> Boolean = { it.childNodes.isEmpty() }
+    ): Node? {
+        if (!it.isSuccessful) return null
+        val p = position.toJavaParser()
+        val queue: Queue<Node> = LinkedList()
+        queue.add(it.result.get())
+        while (queue.isNotEmpty()) {
+            val n = queue.poll()
+            if (n.range.get().contains(p) && pred(n))
+                return n
+            queue.addAll(n.childNodes)
+        }
+        return null
     }
+
+    override fun selectionRange(params: SelectionRangeParams): CompletableFuture<MutableList<SelectionRange>> =
+        repo.get(Uri(params.textDocument.uri))
+            .thenApplyAsync { it ->
+                val nodes = params.positions.map { p -> findNode(p, it) }
+                nodes.mapNotNull { it.parentalSelectionRange }
+                    .toMutableList()
+            }
 
     override fun semanticTokensFull(params: SemanticTokensParams?): CompletableFuture<SemanticTokens> {
         return super.semanticTokensFull(params)
@@ -447,7 +509,7 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
     }
 }
 
-private fun Position.toJavaParser() = com.github.javaparser.Position(line , character )
+private fun Position.toJavaParser() = com.github.javaparser.Position(line, character)
 
 private fun <T> CompletableFuture<ParseResult<CompilationUnit>>.applyOn(collector: ResultingVisitor<T>, default: T)
         : CompletableFuture<T> = this.thenApplyAsync {
