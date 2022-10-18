@@ -16,8 +16,8 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         return arrayListOf(
             DocumentSymbol(
                 n.storage.get().fileName,
-                SymbolKind.Interface,
-                n.asRange, n.primaryType.get().name.asRange, "", children
+                SymbolKind.File,
+                n.asRange, n.primaryType.map { it.name.asRange }.orElse(n.asRange), "", children
             )
         )
     }

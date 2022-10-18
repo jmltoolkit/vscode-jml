@@ -36,7 +36,7 @@ export function activate(context: ExtensionContext) {
 }
 
 function activateLanguageServer(context: ExtensionContext): Disposable {
-	const output = window.createOutputChannel("JML language server")
+	const output = window.createOutputChannel("JML Language Server")
 
 	function createServer(): Promise<StreamInfo> {
 		return new Promise((resolve, reject) => {
@@ -105,7 +105,7 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 	};
 
 	// Create the language client and start the client.
-	let client = new LanguageClient('openjml', 'OpenJML support', createServer, clientOptions);
+	let client = new LanguageClient('jml', 'JML Language Server', createServer, clientOptions);
 	let disposable = client.start();
 	context.subscriptions.push(output)
 	return client;
@@ -168,13 +168,13 @@ async function findJar(context: ExtensionContext): Promise<string> {
 	}
 
 	const locallyInstalled = await workspace.findFiles("**/jml-lsp-*-all.jar");
-	if (locallyInstalled && false) {
+	if (locallyInstalled) {
 		return locallyInstalled[0].fsPath;
 	}
 
 
 	const installDir = path.join(storagePath, 'lsp')
-	const downloader = new ServerDownloader("JML language server", "vscode-jml", /.*\.jar/, installDir)
+	const downloader = new ServerDownloader("JML LSP Download", "vscode-jml", /.*\.jar/, installDir)
 	return await downloader.downloadServerIfNeeded()
 }
 

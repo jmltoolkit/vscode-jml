@@ -118,7 +118,7 @@ export class ServerDownloader {
     }
 
     private async latestReleaseInfo(): Promise<GitHubReleasesAPIResponse> {
-        return await got.get(`https://api.github.com/repos/vscode-jml/${this.githubProjectName}/releases/latest`, {
+        return await got.get(`https://api.github.com/repos/wadoon/${this.githubProjectName}/releases/latest`, {
             headers: { "User-Agent": "vscode-jml" }
         }).json() as GitHubReleasesAPIResponse;
     }
