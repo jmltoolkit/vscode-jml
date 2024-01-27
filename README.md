@@ -29,33 +29,24 @@ following requests:
 
 * Code Outline (`documentSymbols`)
 
+* Error reporting (``)
 
+* Code Actions
+  * [ ] Check well-definedness (requires z3)
+  * [ ] Normalise formula
+  * [ ] ...
 
-* Support for KeY files
+* Code Lenses
+  * [ ] Prove refinment of contracts
+  * [ ] 
+
+* Snippets
+
+* Support for [KeY files](https://key-project.org/)
 
   Syntax highlighting and snippets.
 
-## Changelog
-
-* **0.3.0** (upcoming-2022)
-  - Changing to `SemanticTokenProvider` interface to highlight JML annotation texts inside Java files. 
-    There is no text mate grammar anymore. 
-    
-  - Language Server added on the basis of the [jmlparser
-    project](https://github.com/wadoon/jmlparser).
-  
-  - Simple support for KeY files
-
-    Syntax highlighting and snippets.
-
-* **0.2.0** (04.04.2019)
-  - Fixes by @csicar
-
-* **0.1.0** (14.02.2019)
-  - First release
-
-* **0.0.0** (unpublished)
-  - Start with the `java` language definition of VS Code.
+ 
 
 ## Authors
 

@@ -3,7 +3,6 @@ package jml.lsp.actions
 import com.github.javaparser.ast.jml.clauses.JmlContract
 import com.google.common.cache.CacheBuilder
 import jml.lsp.JmlLanguageServer
-import jml.lsp.LspAction
 import jml.lsp.asRange
 import org.eclipse.lsp4j.CodeLens
 import org.eclipse.lsp4j.MessageParams

@@ -1,8 +1,8 @@
 package jml.lsp
 
+import jml.lsp.actions.LspAction
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.*
-import java.util.ServiceLoader
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ForkJoinPool
@@ -14,22 +14,20 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
     internal val jmlTextDocumentService by lazy { JmlTextDocumentService(this) }
     internal val jmlWorkspaceService by lazy { JmlWorkspaceService(this) }
 
-    lateinit var client: LanguageClient
+    internal lateinit var client: LanguageClient
     internal var capabilities: ClientCapabilities? = null
-    internal var workspaceFolders: List<WorkspaceFolder>? = null
+    internal lateinit var workspaceFolders: List<WorkspaceFolder>
     internal val jmlNotebookDocumentServices by lazy { JmlNotebookDocumentServices() }
 
     internal val actions by lazy {
-        ServiceLoader.load(LspAction::class.java).toList()
+        //ServiceLoader.load(LspAction::class.java).toList()
+        //listOf(VerifyAgainstParent, WellDefinednessCheck)
+        listOf<LspAction<*>>()
     }
 
-    override fun getNotebookDocumentService(): NotebookDocumentService = jmlNotebookDocumentServices
-
-    override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult> {
-        if (params != null) {
-            workspaceFolders = params.workspaceFolders
-            capabilities = params.capabilities
-        }
+    override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+        workspaceFolders = params.workspaceFolders
+        capabilities = params.capabilities
 
         return CompletableFuture.supplyAsync {
             val capabilities = ServerCapabilities()
@@ -37,17 +35,27 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
             capabilities.diagnosticProvider = DiagnosticRegistrationOptions(true, false)
             capabilities.setDocumentSymbolProvider(true)
             capabilities.setWorkspaceSymbolProvider(true)
+
             capabilities.setDeclarationProvider(DeclarationRegistrationOptions("JML"))
-            capabilities.signatureHelpProvider = SignatureHelpOptions()
+
+            // capabilities.signatureHelpProvider = SignatureHelpOptions()
             capabilities.setHoverProvider(true)
-            capabilities.codeLensProvider = CodeLensOptions(true)
+
+            // capabilities.codeLensProvider = CodeLensOptions(false)
             capabilities.setSelectionRangeProvider(true)
 
             //capabilities.setDefinitionProvider(true)
             //capabilities.setDocumentHighlightProvider(true)
             //capabilities.completionProvider = CompletionOptions(true, null)
 
-            capabilities.setCodeActionProvider(CodeActionOptions(actions.map { it.id }))
+            capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions(
+                LEGEND, SemanticTokensServerFull(false), false,
+                listOf(DocumentFilter("java", "file", "*.java"))
+            )
+
+            // capabilities.setCodeActionProvider(CodeActionOptions(listOf("validity")))
+            // capabilities.executeCommandProvider = ExecuteCommandOptions(actions.map { it.id })
+
             return@supplyAsync InitializeResult(capabilities)
         }
     }
@@ -62,6 +70,8 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
         exitProcess(0)
     }
 
+    override fun getNotebookDocumentService(): NotebookDocumentService = jmlNotebookDocumentServices
+
     override fun getTextDocumentService(): TextDocumentService = jmlTextDocumentService
 
     override fun getWorkspaceService(): WorkspaceService = jmlWorkspaceService
@@ -69,5 +79,4 @@ class JmlLanguageServer : LanguageServer, LanguageClientAware {
     override fun connect(client: LanguageClient) {
         this.client = client
     }
-
 }

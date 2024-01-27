@@ -7,7 +7,7 @@ import * as http from 'http';
 import * as child_process from "child_process";
 import * as vscode from 'vscode';
 import { activateSemanticTokensProvider } from './jst'
-import { activateKeyLangage } from './keylang'
+import { activateKeyLanguage } from './keylang'
 import { workspace, Disposable, ExtensionContext, window } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, StreamInfo } from 'vscode-languageclient/node';
 
@@ -25,7 +25,7 @@ export function activate(context: ExtensionContext) {
 		activateSemanticTokensProvider()
 	);
 
-	activateKeyLangage(context)
+	activateKeyLanguage(context)
 
 	const config = workspace.getConfiguration("jml")
 	if (config.get("lspDisabled") !== true) {
@@ -56,6 +56,7 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 
 			const javaExecutablePath = findJavaExecutable();
 			findJar(context).then(jarFile => {
+				console.log("Found Jar file. ", jarFile)
 				// grab a random port.
 				server.listen(() => {
 					// Start the child java process

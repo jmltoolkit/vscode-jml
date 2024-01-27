@@ -7,9 +7,9 @@ import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.Jmlish
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.expr.NameExpr
+import com.github.javaparser.resolution.TypeSolver
 import com.github.javaparser.resolution.declarations.AssociableToAST
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ClassLoaderTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
@@ -41,9 +41,10 @@ class AstRepository(val server: JmlLanguageServer) {
 
     val config: ParserConfiguration = ParserConfiguration()
 
-    val inParsing = Collections.synchronizedMap(mutableMapOf<Uri, CompletableFuture<ParseResult<CompilationUnit>>>())
-    val cached = Collections.synchronizedMap(mutableMapOf<Uri, ParseResult<CompilationUnit>>())
-    val version = Collections.synchronizedMap(mutableMapOf<Uri, Long>())
+    val inParsing: MutableMap<Uri, CompletableFuture<ParseResult<CompilationUnit>>> =
+        Collections.synchronizedMap(mutableMapOf<Uri, CompletableFuture<ParseResult<CompilationUnit>>>())
+    val cached: MutableMap<Uri, ParseResult<CompilationUnit>> = Collections.synchronizedMap(mutableMapOf<Uri, ParseResult<CompilationUnit>>())
+    val version: MutableMap<Uri, Long> = Collections.synchronizedMap(mutableMapOf<Uri, Long>())
 
     val typeSolver: TypeSolver
         get() {
@@ -109,8 +110,8 @@ class AstRepository(val server: JmlLanguageServer) {
                 val diagnostics = result.problems.map {
                     if (it.cause.isPresent)
                         Logger.error("Found exception in errors: {}", it.cause.get())
-                    val d = Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
-                    d
+                    val jml.lsp.actions.LspAction = Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jmlparser")
+                    jml.lsp.actions.LspAction
                 }
                 server.client.publishDiagnostics(
                     PublishDiagnosticsParams(path.value, diagnostics)
@@ -142,8 +143,8 @@ class AstRepository(val server: JmlLanguageServer) {
     fun getDiagnostics(path: Uri): CompletableFuture<MutableList<Diagnostic>> =
         get(path).thenApply { result ->
             if (result.isSuccessful)
-                JmlLintingFacade.lint(JmlLintingConfig(), listOf(result.result.get())).map {
-                    Diagnostic(it.location.asRange, it.verboseMessage, DiagnosticSeverity.Error, "jml-lint")
+                JmlLintingFacade(JmlLintingConfig()).lint(listOf(result.result.get())).map {
+                    Diagnostic(it.location().asRange, it.message(), DiagnosticSeverity.Error, "jml-lint")
                 }.toMutableList()
             else
                 result.problems.map {
@@ -175,6 +176,16 @@ value class Uri(val value: String) {
 
 class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
     val repo = AstRepository(server)
+
+    val documentHighlighter by lazy {
+        server.capabilities?.textDocument?.semanticTokens?.let {
+            it.multilineTokenSupport
+            println(it.tokenTypes)
+            println(it.tokenModifiers)
+
+        }
+        DocumentHighlighter()
+    }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         Logger.info("didOpen: {}", params)
@@ -260,7 +271,7 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
             : Either<MutableList<out Location>, MutableList<out LocationLink>> {
         if (nameExpr != null) {
             val r = nameExpr.resolve()
-            if (r is AssociableToAST<*> && r.toAst().isPresent) {
+            if (r is AssociableToAST && r.toAst().isPresent) {
                 val ast = r.toAst().get()
                 val targetUri = "file://${ast.findCompilationUnit().get().storage.get().path.toFile()}"
                 val targetRange = ast.asRange
@@ -319,11 +330,6 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
 
     override fun references(params: ReferenceParams?): CompletableFuture<MutableList<out Location>> {
         return super.references(params)
-    }
-
-    override fun documentHighlight(params: DocumentHighlightParams): CompletableFuture<MutableList<out DocumentHighlight>> {
-        Logger.info("documentHighlight: {}", params)
-        return CompletableFuture.completedFuture(arrayListOf())
     }
 
     override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<MutableList<Either<SymbolInformation, DocumentSymbol>>> {
@@ -471,9 +477,12 @@ class JmlTextDocumentService(server: JmlLanguageServer) : TextDocumentService {
                     .toMutableList()
             }
 
-    override fun semanticTokensFull(params: SemanticTokensParams?): CompletableFuture<SemanticTokens> {
-        return super.semanticTokensFull(params)
-    }
+    override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> =
+        CompletableFuture.supplyAsync {
+            val doc = Uri(params.textDocument.uri)
+            val text = doc.file.readText()
+            documentHighlighter.analyzeJmlToken(text)
+        }
 
     override fun semanticTokensFullDelta(params: SemanticTokensDeltaParams?): CompletableFuture<Either<SemanticTokens, SemanticTokensDelta>> {
         return super.semanticTokensFullDelta(params)
@@ -515,7 +524,9 @@ private fun <T> CompletableFuture<ParseResult<CompilationUnit>>.applyOn(collecto
         : CompletableFuture<T> = this.thenApplyAsync {
     if (it.result.isPresent) {
         it.result.get().accept(collector, null)
-        collector.result
+        val r = collector.result
+        Logger.info("Result: {}", r)
+        r
     } else
         default
 }

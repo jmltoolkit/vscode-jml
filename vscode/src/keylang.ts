@@ -1,6 +1,7 @@
 import { CharStreams, CommonTokenStream, Token } from "antlr4ts";
 import { DocumentSemanticTokensProvider, Range, ExtensionContext, languages, ProviderResult, SemanticTokens, SemanticTokensBuilder, SemanticTokensLegend, TextDocument } from "vscode";
 import { Key } from "./Key";
+import { KeYJava } from "./KeYJava";
 
 
 const tokenTypes = ['comment', 'variable', 'keyword', 'string', 'number'];
@@ -172,13 +173,65 @@ function translateTokenType(type: number): string {
     return stype
 }
 
+function translateTokenTypeKeYJava(type: number): string {
+    let stype: string = ""
+    switch (type) {
+        case KeYJava.Identifier:
+        case KeYJava.SVIdentifier:
+        case KeYJava.JMLIdentifier:
+        case KeYJava.KEYIDENTIFIER:
+            stype = 'variable'
+            break
+        case KeYJava.COMMENT:
+            stype = 'comment'
+            break
+        case KeYJava.KEYWORDS:
+        case KeYJava.BooleanLiteral:
+            stype = 'keyword'
+            break
+        case KeYJava.StringLiteral:
+        case KeYJava.CharacterLiteral:
+            stype = "string"
+            break;
+        case KeYJava.IntegerLiteral:
+        case KeYJava.FloatingPointLiteral:
+            stype = 'number';
 
-const provider: DocumentSemanticTokensProvider = {
+        default:
+            break;
+    }
+    return stype
+}
+
+
+class KeyTokenProvider implements DocumentSemanticTokensProvider {
+    parseInnerJava(document: TextDocument, tokensBuilder: SemanticTokensBuilder, tok: Token) {
+        const text = tok.text;
+        const chars = CharStreams.fromString(text)
+        const lexer = new KeYJava(chars)
+        const stream = new CommonTokenStream(lexer)
+        let type: number;
+        let offset = tok.startIndex
+        do {
+            type = stream.LA(1);
+            tok = stream.LT(1);
+            if (type == -1) return;
+            let stype = translateTokenType(type)
+            if (stype != "") {
+                const range = new Range(
+                    document.positionAt(offset + tok.startIndex),
+                    document.positionAt(offset + tok.stopIndex + 1));
+                tokensBuilder.push(range, stype);
+            }
+            stream.consume()
+        } while (true);
+    }
+
     provideDocumentSemanticTokens(document: TextDocument): ProviderResult<SemanticTokens> {
         // analyze the document and return semantic tokens
         const tokensBuilder = new SemanticTokensBuilder(legend);
         const text = document.getText()
-        const chars = CharStreams.fromString(document.getText());
+        const chars = CharStreams.fromString(text);
         const lexer = new Key(chars);
 
         const stream = new CommonTokenStream(lexer)
@@ -201,7 +254,7 @@ const provider: DocumentSemanticTokensProvider = {
             if (type == Key.INT_LITERAL) {//rewrite INT_LITERALs to identifier when preceeded by an '('
                 const MAX_K = 10;
                 for (let k = 1; k <= MAX_K; k++) {
-                    let codePoint = String.fromCharCode(this._input.LA(k));
+                    let codePoint = String.fromCharCode(stream.LA(k));
                     if (codePoint == ' ' || codePoint == '\n' ||
                         codePoint == '\r' || codePoint == '\t') continue;
                     if (codePoint == '(')
@@ -212,6 +265,11 @@ const provider: DocumentSemanticTokensProvider = {
 
             if (type == Key.PROOF) {
                 abort = true;
+            }
+
+            if (type == Key.MODALITY) {
+                this.parseInnerJava(document, tokensBuilder, tok);
+                stream.consume()
             }
 
             let stype = translateTokenType(type)
@@ -226,10 +284,12 @@ const provider: DocumentSemanticTokensProvider = {
         } while (type != Key.EOF)
         return tokensBuilder.build();
     }
-};
+}
+
+const provider: DocumentSemanticTokensProvider = new KeyTokenProvider();
 
 
-export function activateKeyLangage(context: ExtensionContext) {
+export function activateKeyLanguage(context: ExtensionContext) {
     const selector = { language: 'key', scheme: 'file' };
     const disposable = languages.registerDocumentSemanticTokensProvider(selector, provider, legend);
     context.subscriptions.push(disposable);

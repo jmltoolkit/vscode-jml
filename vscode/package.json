@@ -57,11 +57,11 @@
         "snippets": [
             {
                 "language": "java",
-                "path": "./jml_snippets.json"
+                "path": "./snippets/jml-snippets.json"
             },
             {
                 "language": "key",
-                "path": "./key_snippets.json"
+                "path": "./snippets/key-snippets.json"
             }
         ],
         "semanticTokenScopes": [
@@ -93,7 +93,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
-        "antlr4ts": "antlr4ts src/JML.g4 src/Key.g4",
+        "antlr4ts": "antlr4ts src/JML.g4 src/Key.g4 src/KeYJava.g4",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js"

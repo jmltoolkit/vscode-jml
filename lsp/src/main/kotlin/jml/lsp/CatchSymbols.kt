@@ -1,17 +1,25 @@
 package jml.lsp
 
-import com.github.javaparser.ast.*
+import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.expr.VariableDeclarationExpr
 import com.github.javaparser.ast.jml.body.*
 import com.github.javaparser.ast.jml.clauses.*
 import com.github.javaparser.ast.modules.ModuleDeclaration
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter
-import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.DocumentSymbol
+import org.eclipse.lsp4j.SymbolKind
 import java.util.*
 
+/**
+ * Runs through an AST and gathers symbols within JML annotations.
+ *
+ * @author Alexander Weigl
+ */
 class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>() {
-    override fun visit(n: CompilationUnit, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: CompilationUnit, arg: Unit?): MutableList<DocumentSymbol> {
         val children = acceptAll(n.types)
         return arrayListOf(
             DocumentSymbol(
@@ -33,7 +41,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         )
     }
 
-    override fun visit(n: AnnotationMemberDeclaration, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: AnnotationMemberDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
         return arrayListOf(
             DocumentSymbol(
                 n.nameAsString,
@@ -95,7 +103,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         )
     }
 
-    override fun visit(n: FieldDeclaration, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: FieldDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
         return n.variables.map {
             DocumentSymbol(
                 it.nameAsString,
@@ -105,7 +113,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         }.toMutableList()
     }
 
-    override fun visit(n: MethodDeclaration, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: MethodDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
         val children = acceptAllo(n.contracts)
         return arrayListOf(
             DocumentSymbol(
@@ -124,7 +132,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         return super.visit(n, arg)
     }
 
-    override fun visit(n: ModuleDeclaration, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: ModuleDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
         return arrayListOf(
             DocumentSymbol(
                 n.nameAsString,
@@ -134,7 +142,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         )
     }
 
-    override fun visit(n: JmlContract, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: JmlContract, arg: Unit?): MutableList<DocumentSymbol> {
         val children = acceptAll(n.subContracts) + acceptAll(n.clauses)
         return arrayListOf(
             DocumentSymbol(
@@ -145,12 +153,12 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         )
     }
 
-    override fun visit(n: JmlRepresentsDeclaration?, arg: Unit?): MutableList<DocumentSymbol>? {
-        return arrayListOf();//return super.visit(n, arg)
+    override fun visit(n: JmlRepresentsDeclaration?, arg: Unit?): MutableList<DocumentSymbol> {
+        return arrayListOf()//return super.visit(n, arg)
     }
 
     override fun visit(n: JmlFieldDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
-        var decl = n.decl
+        val decl = n.decl
         return decl.variables.map { v ->
             DocumentSymbol(
                 v.nameAsString,
@@ -165,7 +173,7 @@ class CatchSymbols : GenericVisitorAdapter<MutableList<DocumentSymbol>?, Unit?>(
         return arrayListOf() //super.visit(n, arg)
     }
 
-    override fun visit(n: JmlClassExprDeclaration, arg: Unit?): MutableList<DocumentSymbol>? {
+    override fun visit(n: JmlClassExprDeclaration, arg: Unit?): MutableList<DocumentSymbol> {
         return arrayListOf(
             DocumentSymbol(
                 n.name.map { it.asString() }.orElse("anon invariant"),

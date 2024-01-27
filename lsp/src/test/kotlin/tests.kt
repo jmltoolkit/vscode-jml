@@ -1,14 +1,15 @@
 import com.google.common.truth.Truth
 import jml.lsp.DocumentationIndex
 import jml.lsp.JmlLanguageServer
+import jml.lsp.Uri
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import java.io.File
-import java.lang.StringBuilder
 import java.util.concurrent.CompletableFuture
+import kotlin.test.assertTrue
 
 private val File.toUri: String
     get() = "file://${absolutePath}"
@@ -52,12 +53,29 @@ class HoverTest {
     }
 
     @Test
-    fun test1(): Unit {
+    fun test1() {
         val file = TextDocumentIdentifier(File(workspace, "Example.java").toUri)
         val params = HoverParams(file, Position(12, 10)) // requires
         val resp = docService.hover(params).get()
         println(resp.range)
         println(resp.contents.right.value)
+    }
+}
+
+class CodeActionTests {
+    @Test
+    fun test1() {
+        val file = TextDocumentIdentifier(File(workspace, "Example.java").toUri)
+        val params = CodeActionParams(
+            file, Range(Position(6, 35), Position(6, 35)),
+            CodeActionContext(listOf(), null)
+        )
+        val resp = docService.codeAction(params).get()
+        println(resp)
+        with(Truth.assertThat(resp)) {
+            isNotNull()
+            isNotEmpty()
+        }
     }
 }
 
@@ -86,6 +104,64 @@ class DeclarationTests {
 
         //val result1 = docService.declaration(variableInClause).get()
         //val result2 = docService.declaration(variableInAssert).get()
+
+    }
+}
+
+class HighlighterTest {
+    data class Entry(
+        val line: Int,
+        val column: Int,
+        val len: Int,
+        val type: Int,
+        val modifiers: Int
+    ) {
+        constructor(pos: Int, data: List<Int>) : this(
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4]
+        )
+    }
+
+    @Test
+    fun test1() {
+        val file = TextDocumentIdentifier(File(workspace, "Declarations.java").toUri)
+        val res = docService.semanticTokensFull(SemanticTokensParams(file)).get()
+
+        assertTrue { res.data.size % 5 == 0 }
+        val entries = mutableListOf<Entry>()
+        for (i in 0 until res.data.size / 5) {
+            val entry = Entry(5 * i, res.data)
+            assertTrue { entry.column >= 0 }
+            assertTrue { entry.line >= 0 }
+            assertTrue { entry.len >= 1 }
+            assertTrue { entry.type >= 0 }
+            entries.add(entry)
+        }
+
+        var line = -1
+        var column = 0
+        val text = Uri(file.uri).file.readText().split("\n")
+
+        for (entry in entries) {
+            line += entry.line
+            if (entry.line != 0) column = entry.column
+            else column += entry.column
+            val image = text[line].substring(column - 1, column - 1 + entry.len)
+            println(image)
+        }
+
+
+        /*
+            at index 5*i - deltaLine: token line number, relative to the previous token
+            at index 5*i+1 - deltaStart: token start character, relative to the previous token (relative to 0 or the previous
+                token’s start if they are on the same line)
+            at index 5*i+2 - length: the length of the token.
+            at index 5*i+3 - tokenType: will be looked up in SemanticTokensLegend.tokenTypes. We currently ask that tokenType < 65536.
+            at index 5*i+4 - tokenModifiers: each set bit will be looked up in SemanticTokensLegend.tokenModifiers
+         */
 
     }
 }
@@ -140,7 +216,7 @@ class DocumentSymbolTests {
                 .append(":")
                 .append(right.selectionRange.start.character + 1)
                 .append("\n")
-            toCsv(right.children, file, sb, depth + 1);
+            toCsv(right.children, file, sb, depth + 1)
         }
         return sb
     }

@@ -106,7 +106,12 @@ JML_MODIFIERS:
 	| 'spect_package'
 	| 'spec_protected';
 
-JML_KEYWORDS_TL_EXPR: 'fsadfsdaf';
+JML_KEYWORDS_TL_EXPR: 
+	 'invariant'
+	| 'constraint'
+	| 'initially'
+	| 'axiom'
+;
 
 JML_KEYWORDS_TL:
 	(
@@ -121,10 +126,6 @@ JML_KEYWORDS_TL:
 	| 'assert'
 	| 'assume'
 	| 'model'
-	| 'invariant'
-	| 'constraint'
-	| 'initially'
-	| 'axiom'
 	| 'accessible'
 	| 'assignable'
 	| 'breaks'

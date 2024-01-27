@@ -20,4 +20,19 @@ class EverythingWrong {
     public final int x;
     /*@ assignable x; */
     public void bear() {}
+
+
+    /*@
+    public normal_behavior 
+    ensures true;
+    {|
+        also 
+            requires a<0;
+        also
+            requires a>0;
+        also 
+            requires a==0; 
+    |}
+    */
+    public void bbbbb() {}
 }
