@@ -8,21 +8,11 @@ public class Example {
     public int foo = 2;
 
     /*@
-    public model_behavior test :
-    requires true;
+    model_behavior
+    requires req1 : true;
     ensures true;
     assignable \nothing;
     public model int bar(int a);
     */
-
-
-    /*@
-    public behavior my_contract: 
-        requires (\exists int i; a*b == i*2);
-        ensures \result >= 2;
-    */
-    public void baz(int a, int b) {
-        //@ assert true;
-    }
 }
  

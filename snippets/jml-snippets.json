@@ -1,0 +1,71 @@
+{
+	"Method Contract (normal)": {
+		"prefix": "normal_",
+		"body": [
+			"public normal_behavior",
+			"requires $0;",
+			"ensures $1;",
+			"assignable \\nothing;",
+		],
+		"description": "Stub for a method contract without exceptions"
+	},
+	"Method Contract (complete)": {
+		"prefix": "behavior",
+		"body": [
+			"public behavior",
+			"forall $3 $4;",
+			"requires $0;",
+			"ensures $1;",
+			"signals (Exception e) $2;",
+			"assignable \\nothing;",
+		],
+		"description": "Stub for a method contract"
+	},
+	"Loop invariant (slim)": {
+		"prefix": "loop_inv",
+		"body": [
+			"loop_invariant $0;",
+			"assignable \\nothing;"
+		],
+		"description": "Stub for a method contract"
+	},
+	"Model methdod with contract": {
+		"prefix": "modelm",
+		"body": [
+			"model_behavior",
+			"requires $5;",
+			"ensures $6;",
+			"assignable \\nothing;",
+			"public model $1 $2($3) $4"
+		],
+		"description": "Stub for a model method"
+	},
+	"Forall over Array": {
+		"description": "Universal quantification over an array",
+		"prefix": "forallary",
+		"body": [
+			"(\\forall int $1 = 0; 0 <= $1 < $2.length; $3)"
+		]
+	},
+	"Exists over Array": {
+		"description": "Existential quantification over an array",
+		"prefix": "existsary",
+		"body": [
+			"(\\exists int $1 = 0; 0 <= $1 < $2.length; $3)"
+		]
+	},
+	"Set statement": {
+		"description": "set statement",
+		"prefix": "set",
+		"body": [
+			"//@ set $1 = $2;"
+		]
+	},	
+	"let": {
+		"description": "Let expr",
+		"prefix": "let",
+		"body": [
+			"(\\let var $1 = $2; $3)"
+		]
+	}
+}

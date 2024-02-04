@@ -1,0 +1,12 @@
+{
+	"Method Contract (normal)": {
+		"prefix": "normal_",
+		"body": [
+			"public normal_behavior",
+			"requires $0;",
+			"ensures $1;",
+			"assignable \\nothing;",
+		],
+		"description": "Stub for a method contract without exceptions"
+	}
+}
