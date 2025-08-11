@@ -100,21 +100,21 @@
     },
     "devDependencies": {
         "@types/mocha": "9.1.1",
-        "@types/node": "18.0.6",
-        "@types/vscode": "^1.69.0",
-        "@typescript-eslint/eslint-plugin": "5.30.7",
-        "@typescript-eslint/parser": "5.30.7",
+        "@types/node": "24.2.1",
+        "@types/vscode": "^1.102.0",
+        "@typescript-eslint/eslint-plugin": "8.39.0",
+        "@typescript-eslint/parser": "8.39.0",
         "antlr4ts-cli": "0.5.0-alpha.4",
-        "esbuild": "^0.14.49",
-        "eslint": "8.20.0",
-        "mocha": "10.0.0",
-        "typescript": "4.7.4",
-        "vsce": "2.9.3",
-        "vscode-languageclient": "^8.0.2"
+        "esbuild": "^0.25.8",
+        "eslint": "9.33.0",
+        "mocha": "11.7.1",
+        "typescript": "5.9.2",
+        "vsce": "2.15.0",
+        "vscode-languageclient": "^9.0.1"
     },
     "dependencies": {
         "antlr4ts": "^0.5.0-alpha.4",
-        "globby": "^13.1.2",
-        "got": "^12.5.3"
+        "globby": "^14.1.0",
+        "got": "^14.4.7"
     }
 }
