@@ -100,13 +100,13 @@
     },
     "devDependencies": {
         "@types/mocha": "10.0.10",
-        "@types/node": "24.9.1",
+        "@types/node": "24.10.0",
         "@types/vscode": "^1.105.0",
         "@typescript-eslint/eslint-plugin": "8.46.2",
         "@typescript-eslint/parser": "8.46.2",
         "antlr4ts-cli": "0.5.0-alpha.4",
-        "esbuild": "^0.25.11",
-        "eslint": "9.38.0",
+        "esbuild": "^0.25.12",
+        "eslint": "9.39.0",
         "mocha": "11.7.4",
         "typescript": "5.9.3",
         "vsce": "2.15.0",
@@ -115,6 +115,6 @@
     "dependencies": {
         "antlr4ts": "^0.5.0-alpha.4",
         "globby": "^15.0.0",
-        "got": "^14.6.1"
+        "got": "^14.6.2"
     }
 }
