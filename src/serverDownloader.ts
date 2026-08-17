@@ -1,19 +1,20 @@
-// Taken from https://raw.githubusercontent.com/fwcd/vscode-kotlin/dc413a27e4f8e9a728e7cee63f795105e53939fc/src/serverDownloader.ts
-// Original licensed under MIT, modified for vscode-jml
+// Download language servers from GitHub releases
+// Licensed under GPL-3.0-only
 
 import * as path from "path";
-import * as semver from "semver";
 import * as fs from "fs";
 import got from 'got';
 import { promisify } from 'node:util';
-import * as stream from 'stream'
-import * as vscode from 'vscode'
+import * as stream from 'stream';
+import * as vscode from 'vscode';
+// Note: semver types are provided by @types/semver
+const semver = require('semver');
 
 
 export interface ServerInfo {
-    version: string
-    lastUpdate: number
-    filename: string
+    version: string;
+    lastUpdate: number;
+    filename: string;
 }
 
 export interface GitHubReleasesAPIResponse {
@@ -74,25 +75,25 @@ export interface GitHubReleasesAPIAsset {
 }
 
 
-export async function download(srcUrl: string, destPath: fs.PathLike, progress: (percent: number) => void): Promise<void> {
-    const pipeline = promisify(stream.pipeline)
-    const downStream = got.stream(srcUrl)
-    downStream.on('downloadProgress', progress)
-    await pipeline(downStream, fs.createWriteStream(destPath))
-
-    /*
-    return new Promise((resolve, reject) => {
-        requestProgress(request(srcUrl))
-            .on("progress", state => progress(state.percent))
-            .on("complete", () => resolve())
-            .on("error", err => reject(err))
-            .pipe(fs.createWriteStream(destPath));
-    });*/
+/**
+ * Downloads a file from URL to destination path with progress reporting
+ */
+export async function download(
+    srcUrl: string, 
+    destPath: string, 
+    progress: (percent: number) => void
+): Promise<void> {
+    const pipeline = promisify(stream.pipeline);
+    const downStream = got.stream(srcUrl);
+    downStream.on('downloadProgress', (progressData) => {
+        progress(progressData.percent);
+    });
+    await pipeline(downStream, fs.createWriteStream(destPath));
 }
 
-async function fsExists(path: fs.PathLike): Promise<boolean> {
+async function fsExists(pathLike: string): Promise<boolean> {
     try {
-        await fs.promises.access(path);
+        await fs.promises.access(pathLike);
         return true;
     } catch {
         return false;
@@ -100,36 +101,49 @@ async function fsExists(path: fs.PathLike): Promise<boolean> {
 }
 
 /**
- * Downloads language servers or debug adapters from GitHub releases.
- * The downloaded automatically manages versioning and downloads
+ * Downloads language servers from GitHub releases.
+ * The downloader automatically manages versioning and downloads
  * updates if necessary.
  */
 export class ServerDownloader {
     private displayName: string;
-    private githubProjectName: string;
-    private assetName: RegExp;
+    private githubOwner: string;
+    private githubRepo: string;
+    private assetPattern: RegExp;
     private installDir: string;
 
-    constructor(displayName: string, githubProjectName: string, assetName: RegExp, installDir: string) {
+    constructor(
+        displayName: string, 
+        githubOwner: string, 
+        githubRepo: string,
+        assetPattern: RegExp, 
+        installDir: string
+    ) {
         this.displayName = displayName;
-        this.githubProjectName = githubProjectName;
+        this.githubOwner = githubOwner;
+        this.githubRepo = githubRepo;
         this.installDir = installDir;
-        this.assetName = assetName;
+        this.assetPattern = assetPattern;
     }
 
     private async latestReleaseInfo(): Promise<GitHubReleasesAPIResponse> {
-        return await got.get(`https://api.github.com/repos/wadoon/${this.githubProjectName}/releases/latest`, {
-            headers: { "User-Agent": "vscode-jml" }
-        }).json() as GitHubReleasesAPIResponse;
+        return await got.get(
+            `https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/releases/latest`, 
+            {
+                headers: { "User-Agent": "vscode-jmltk" }
+            }
+        ).json() as GitHubReleasesAPIResponse;
     }
 
     private serverInfoFile(): string {
         return path.join(this.installDir, "SERVER-INFO");
     }
 
-    private async installedServerInfo(): Promise<ServerInfo> {
+    private async installedServerInfo(): Promise<ServerInfo | null> {
         try {
-            const info = JSON.parse((await fs.promises.readFile(this.serverInfoFile())).toString("utf8")) as ServerInfo;
+            const info = JSON.parse(
+                (await fs.promises.readFile(this.serverInfoFile())).toString("utf8")
+            ) as ServerInfo;
             return semver.valid(info.version) ? info : null;
         } catch {
             return null;
@@ -137,39 +151,59 @@ export class ServerDownloader {
     }
 
     private async updateInstalledServerInfo(info: ServerInfo): Promise<void> {
-        await fs.promises.writeFile(this.serverInfoFile(), JSON.stringify(info), { encoding: "utf8" });
+        await fs.promises.writeFile(
+            this.serverInfoFile(), 
+            JSON.stringify(info), 
+            { encoding: "utf8" }
+        );
     }
 
-    private async downloadServer(downloadUrl: string, downloadDest: string, version: string) {
+    /**
+     * Downloads the server jar file with VS Code progress notification
+     */
+    private async downloadServer(downloadUrl: string, version: string): Promise<string> {
         if (!(await fsExists(this.installDir))) {
             await fs.promises.mkdir(this.installDir, { recursive: true });
         }
 
-        vscode.window.withProgress({
+        const fileName = path.basename(new URL(downloadUrl).pathname);
+        const destPath = path.join(this.installDir, fileName);
+
+        await vscode.window.withProgress({
             cancellable: true,
             location: vscode.ProgressLocation.Notification,
-            title: "Downloading jml language server"
-        }, async (progress, cancel) => {
-            //const downloadDest = path.join(this.installDir, `download-${this.assetName}`);
+            title: `Downloading ${this.displayName}`
+        }, async (progress, token) => {
             progress.report({ message: `Downloading ${this.displayName} ${version}...` });
-            await download(downloadUrl, downloadDest, percent => {
-                progress.report({ message: `Downloading ${this.displayName} ${version} :: ${(percent * 100).toFixed(2)} %` });
+            
+            await download(downloadUrl, destPath, (percent) => {
+                const percentStr = (percent * 100).toFixed(2);
+                progress.report({ 
+                    message: `Downloading ${this.displayName} ${version}: ${percentStr}%`,
+                    increment: 0
+                });
             });
 
-            //status.update(`Unpacking ${this.displayName} ${version}...`);
-            //await extractZip(downloadDest, { dir: this.installDir });
-            //await fs.promises.unlink(downloadDest);
             progress.report({ message: `Initializing ${this.displayName} ${version}...` });
         });
+
+        return destPath;
     }
 
+    /**
+     * Downloads the server if needed and returns the path to the jar file
+     */
     async downloadServerIfNeeded(): Promise<string> {
         const serverInfo = await this.installedServerInfo();
-        const serverInfoOrDefault = serverInfo || { version: "0.0.0", lastUpdate: Number.MIN_SAFE_INTEGER };
+        const serverInfoOrDefault: ServerInfo = serverInfo ?? { 
+            version: "0.0.0", 
+            lastUpdate: Number.MIN_SAFE_INTEGER,
+            filename: ""
+        };
         const secondsSinceLastUpdate = (Date.now() - serverInfoOrDefault.lastUpdate) / 1000;
 
+        // Only check for updates if enough time has passed (8 minutes)
         if (secondsSinceLastUpdate > 480) {
-            // Only query GitHub API for latest version if some time has passed
             console.info(`Querying GitHub API for new ${this.displayName} version...`);
 
             let releaseInfo: GitHubReleasesAPIResponse;
@@ -182,104 +216,50 @@ export class ServerDownloader {
                     // No server is installed yet, so throw
                     throw new Error(message);
                 } else {
-                    // Do not throw since user might just be offline
-                    // and a version of the server is already installed
+                    // User might be offline, use existing installation
                     console.warn(message);
-                    return;
+                    return path.join(this.installDir, serverInfo.filename);
                 }
             }
 
             const latestVersion = releaseInfo.tag_name;
             const installedVersion = serverInfoOrDefault.version;
             const serverNeedsUpdate = semver.gt(latestVersion, installedVersion);
-            let newVersion = installedVersion;
 
-            if (serverNeedsUpdate) {
-                const serverAsset = releaseInfo.assets.find(asset => asset.name.match(this.assetName));
+            if (serverNeedsUpdate || !serverInfo) {
+                const serverAsset = releaseInfo.assets.find(asset => 
+                    asset.name.match(this.assetPattern)
+                );
+                
                 if (serverAsset) {
                     const downloadUrl = serverAsset.browser_download_url;
-                    await this.downloadServer(downloadUrl,
-                        path.join(this.installDir, serverAsset.name), latestVersion);
-                    newVersion = latestVersion;
+                    const downloadedPath = await this.downloadServer(
+                        downloadUrl, 
+                        latestVersion
+                    );
+                    
                     await this.updateInstalledServerInfo({
-                        version: newVersion,
+                        version: latestVersion,
                         lastUpdate: Date.now(),
                         filename: serverAsset.name
-                    });                    
-                    return path.join(this.installDir, serverAsset.name)
+                    });
+
+                    vscode.window.showInformationMessage(
+                        `${this.displayName} ${latestVersion} downloaded successfully!`
+                    );
+                    
+                    return downloadedPath;
                 } else {
-                    throw new Error(`Latest GitHub release for ${this.githubProjectName} does not contain the asset with pattern '${this.assetName}'!`);
+                    throw new Error(
+                        `Latest GitHub release for ${this.githubOwner}/${this.githubRepo} ` +
+                        `does not contain an asset matching pattern '${this.assetPattern}'!`
+                    );
                 }
             }
-        } 
-        return path.join(this.installDir, serverInfo.filename)
+        }
+        
+        // Return existing installation
+        const filename = serverInfo?.filename || serverInfoOrDefault.filename;
+        return path.join(this.installDir, filename);
     }
 }
-
-/*
-async function downloadLanguageServer(storagePath: string): Promise<string> {
-    let progress: vscode.Progress<any> | undefined;
-    let cancel: vscode.CancellationToken | undefined;
-    let dest: string | undefined
-    let done: Function | false | undefined;
-
-    const request = http.get("https://github.com", function (response) {
-        if (response.statusCode == 200) {
-            dest = path.join(storagePath, "lsp", response.headers["content-disposition"])
-            if (cancel) {
-                cancel.onCancellationRequested(() => {
-                    if (request.destroyed || response.destroyed) return;
-                    request.destroy();
-                    response.destroy();
-                });
-            } else {
-                console.error("failed registering cancel token");
-            }
-
-            let len = parseInt(response.headers["content-length"] || "0")
-            let totalPercent: number = 0;
-            response.addListener("data", (chunk) => {
-                let increment = chunk.length / len;
-                totalPercent += increment;
-                if (progress)
-                    progress.report({
-                        message: `Downloaded ${(totalPercent * 100).toFixed(2)}%`,
-                        increment: increment * 100
-                    });
-            })
-
-            const file = fs.createWriteStream(path.resolve())
-            response.pipe(file, { end: true });
-            // after download completed close filestream
-            file.on("end", () => {
-                file.close();
-                console.log("Download Completed");
-            });
-
-            response.on('error', error => {
-                file.close()
-                window.showErrorMessage("Download error " + error.message)
-                console.log(error)
-            })
-        }
-    }).on('error', function (err) { // Handle errors
-        if (dest) fs.unlink(dest, (err) => { });
-        //if (cb) cb(err.message);
-    });
-
-    vscode.window.withProgress({
-        cancellable: true,
-        location: vscode.ProgressLocation.Notification,
-        title: "Downloading jml language server"
-    }, (_progress, _cancel) => {
-        progress = _progress;
-        cancel = _cancel;
-        return new Promise((resolve) => {
-            if (done === false)
-                return resolve(undefined);
-            done = resolve;
-        });
-    });
-    return "";
-}
-*/

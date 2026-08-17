@@ -10,14 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ['14']
+        node: ['18', '20']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
       - name: Install dependencies
         run: npm install
-      - name: Build
+      - name: Build (esbuild)
+        run: npm run esbuild
+      - name: Compile TypeScript
         run: npm run compile
+      - name: Run Tests
+        run: npm test
+        env:
+          DISPLAY: :99
+          # Note: Integration tests require a display for VS Code
+          # For CI, unit tests can be run separately if needed
+      - name: Lint
+        run: npm run lint

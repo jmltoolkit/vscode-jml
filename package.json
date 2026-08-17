@@ -18,25 +18,45 @@
     ],
     "contributes": {
         "configuration": {
-            "title": "Java Modelling Language (JML)",
+            "title": "Java Modelling Language Toolkit (JMLTK)",
             "properties": {
-                "jml.lspDisabled": {
+                "jmltk.lspDisabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "If set to true, the language server is activated and downloaded."
+                    "description": "If set to true, the language server is NOT activated."
                 },
-                "jml.javaPath": {
+                "jmltk.javaHome": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Path to JRE/JDK installation directory. If not set, auto-detection is used."
+                },
+                "jmltk.javaPath": {
                     "type": "string",
                     "default": "java",
-                    "description": "The path to Java executable for running the language server."
+                    "description": "The path to Java executable for running the language server. Only used if javaHome is not set."
                 },
-                "jml.jarFile": {
+                "jmltk.jarFile": {
                     "type": [
                         "string",
                         "null"
                     ],
                     "default": null,
                     "description": "The path to Jar of the language server. If not set, the lookup and download mechanism is triggered."
+                },
+                "jmltk.githubOwner": {
+                    "type": "string",
+                    "default": "wadoon",
+                    "description": "GitHub repository owner for downloading the LSP server."
+                },
+                "jmltk.githubRepo": {
+                    "type": "string",
+                    "default": "jml-lsp",
+                    "description": "GitHub repository name for downloading the LSP server."
+                },
+                "jmltk.assetPattern": {
+                    "type": "string",
+                    "default": ".*\\.jar",
+                    "description": "Regex pattern for matching the jar asset in GitHub releases."
                 }
             }
         },

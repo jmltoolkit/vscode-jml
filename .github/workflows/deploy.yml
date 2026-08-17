@@ -8,35 +8,34 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '14'
+          node-version: '20'
       - name: Install dependencies
         run: npm install
-      - name: Build and package extension
-        run: npm run package-extension -- -o kotlin.vsix
+      - name: Build extension
+        run: npm run esbuild-base -- --minify
+      - name: Package extension
+        run: npm run package
       - name: Create release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Version ${{ github.ref }}
+          name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./kotlin.vsix
-          asset_name: kotlin-${{ github.ref }}.vsix
-          asset_content_type: application/zip
-      - name: Publish extension to VSC marketplace
-        run: npm run publish-extension -- -p $VSC_TOKEN
+          files: |
+            *.vsix
+      - name: Publish extension to VS Code Marketplace
+        run: npx vsce publish -p $VSC_TOKEN
         env:
           VSC_TOKEN: ${{ secrets.VSC_TOKEN }}
+      - name: Publish extension to Open VSX Registry
+        run: npx ovsx publish -p $OVSX_TOKEN
+        env:
+          OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
