@@ -31,7 +31,10 @@
                     "description": "The path to Java executable for running the language server."
                 },
                 "jml.jarFile": {
-                    "type": ["string","null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": null,
                     "description": "The path to Jar of the language server. If not set, the lookup and download mechanism is triggered."
                 }
@@ -107,9 +110,9 @@
         "antlr4ts-cli": "0.5.0-alpha.4",
         "esbuild": "^0.28.0",
         "eslint": "10.3.0",
-        "mocha": "11.7.5",
+        "mocha": "^11.3.0",
         "typescript": "6.0.3",
-        "vsce": "2.15.0",
+        "vsce": "^1.25.1",
         "vscode-languageclient": "^9.0.1"
     },
     "dependencies": {
