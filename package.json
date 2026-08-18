@@ -25,38 +25,28 @@
                     "default": false,
                     "description": "If set to true, the language server is NOT activated."
                 },
-                "jmltk.javaHome": {
-                    "type": "string",
-                    "default": null,
-                    "description": "Path to JRE/JDK installation directory. If not set, auto-detection is used."
-                },
-                "jmltk.javaPath": {
-                    "type": "string",
-                    "default": "java",
-                    "description": "The path to Java executable for running the language server. Only used if javaHome is not set."
-                },
-                "jmltk.jarFile": {
+                "jmltk.serverScript": {
                     "type": [
                         "string",
                         "null"
                     ],
                     "default": null,
-                    "description": "The path to Jar of the language server. If not set, the lookup and download mechanism is triggered."
+                    "description": "The path to the language server shell script. If not set, the lookup and download mechanism is triggered."
                 },
                 "jmltk.githubOwner": {
                     "type": "string",
-                    "default": "wadoon",
+                    "default": "jmltoolkit",
                     "description": "GitHub repository owner for downloading the LSP server."
                 },
                 "jmltk.githubRepo": {
                     "type": "string",
-                    "default": "jml-lsp",
+                    "default": "jmltk",
                     "description": "GitHub repository name for downloading the LSP server."
                 },
                 "jmltk.assetPattern": {
                     "type": "string",
-                    "default": ".*\\.jar",
-                    "description": "Regex pattern for matching the jar asset in GitHub releases."
+                    "default": "jmltk-.*\\.zip$",
+                    "description": "Regex pattern for matching the language server distribution asset in GitHub releases."
                 }
             }
         },

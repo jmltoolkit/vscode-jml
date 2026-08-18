@@ -24,7 +24,7 @@ suite('ServerDownloader Test Suite', () => {
             'Test LSP',
             'test-owner',
             'test-repo',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
         
@@ -36,7 +36,7 @@ suite('ServerDownloader Test Suite', () => {
             'Test LSP',
             'wadoon',
             'jml-lsp',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
 
@@ -57,29 +57,30 @@ suite('ServerDownloader Test Suite', () => {
         const serverInfo: ServerInfo = {
             version: '1.0.0',
             lastUpdate: Date.now(),
-            filename: 'test-server.jar'
+            filename: 'v1.0.0/bin/jmltk-lsp'
         };
         
         fs.mkdirSync(tempDir, { recursive: true });
+        fs.mkdirSync(path.join(tempDir, 'v1.0.0', 'bin'), { recursive: true });
         fs.writeFileSync(
             path.join(tempDir, 'SERVER-INFO'),
             JSON.stringify(serverInfo)
         );
 
-        // Create a dummy jar file
-        fs.writeFileSync(path.join(tempDir, 'test-server.jar'), 'dummy content');
+        // Create a dummy server script
+        fs.writeFileSync(path.join(tempDir, 'v1.0.0', 'bin', 'jmltk-lsp'), '#!/bin/sh\necho "JML LSP"');
 
         const downloader = new ServerDownloader(
             'Test LSP',
             'wadoon',
             'jml-lsp',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
 
-        // Should return the existing jar path without downloading
+        // Should return the existing server script path without downloading
         const result = await downloader.downloadServerIfNeeded();
-        assert.ok(result.includes('test-server.jar'));
+        assert.ok(result.includes('jmltk-lsp'));
     });
 
     test('ServerDownloader should detect outdated version', async () => {
@@ -87,7 +88,7 @@ suite('ServerDownloader Test Suite', () => {
         const oldServerInfo: ServerInfo = {
             version: '0.0.1',
             lastUpdate: 0, // Very old timestamp
-            filename: 'old-server.jar'
+            filename: 'v0.0.1/bin/jmltk-lsp'
         };
         
         fs.mkdirSync(tempDir, { recursive: true });
@@ -100,7 +101,7 @@ suite('ServerDownloader Test Suite', () => {
             'Test LSP',
             'wadoon',
             'jml-lsp',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
 
@@ -119,27 +120,28 @@ suite('ServerDownloader Test Suite', () => {
         const recentServerInfo: ServerInfo = {
             version: '1.0.0',
             lastUpdate: Date.now(),
-            filename: 'current-server.jar'
+            filename: 'v1.0.0/bin/jmltk-lsp'
         };
         
         fs.mkdirSync(tempDir, { recursive: true });
+        fs.mkdirSync(path.join(tempDir, 'v1.0.0', 'bin'), { recursive: true });
         fs.writeFileSync(
             path.join(tempDir, 'SERVER-INFO'),
             JSON.stringify(recentServerInfo)
         );
-        fs.writeFileSync(path.join(tempDir, 'current-server.jar'), 'dummy content');
+        fs.writeFileSync(path.join(tempDir, 'v1.0.0', 'bin', 'jmltk-lsp'), '#!/bin/sh\necho "JML LSP"');
 
         const downloader = new ServerDownloader(
             'Test LSP',
             'wadoon',
             'jml-lsp',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
 
         // Should return immediately without checking GitHub
         const result = await downloader.downloadServerIfNeeded();
-        assert.ok(result.includes('current-server.jar'));
+        assert.ok(result.includes('jmltk-lsp'));
     });
 
     test('ServerDownloader handles invalid SERVER-INFO gracefully', async () => {
@@ -154,7 +156,7 @@ suite('ServerDownloader Test Suite', () => {
             'Test LSP',
             'wadoon',
             'jml-lsp',
-            /.*\.jar/,
+            /jmltk-.*\.zip$/,
             tempDir
         );
 
@@ -168,24 +170,23 @@ suite('ServerDownloader Test Suite', () => {
     });
 
     test('Asset pattern matching works correctly', () => {
-        const jarPattern = /.*\.jar/;
-        const specificPattern = /jml-lsp-.*-all\.jar/;
+        const zipPattern = /jmltk-.*\.zip$/;
         
         const testAssets = [
-            'jml-lsp-1.0.0-all.jar',
+            'jmltk-1.0.0.zip',
+            'jmltk-2.0.1.zip',
+            'jml-lsp-1.0.0.zip',
             'server.jar',
             'library.zip',
-            'my-app.jar',
-            'JML-LSP-2.0.0-all.JAR'
+            'my-app.zip'
         ];
 
-        // Test generic jar pattern
-        assert.ok(jarPattern.test('jml-lsp-1.0.0-all.jar'));
-        assert.ok(jarPattern.test('server.jar'));
-        assert.ok(!jarPattern.test('library.zip'));
-
-        // Test specific pattern
-        assert.ok(specificPattern.test('jml-lsp-1.0.0-all.jar'));
-        assert.ok(!specificPattern.test('other.jar'));
+        // Test jmltk zip pattern
+        assert.ok(zipPattern.test('jmltk-1.0.0.zip'));
+        assert.ok(zipPattern.test('jmltk-2.0.1.zip'));
+        assert.ok(!zipPattern.test('jml-lsp-1.0.0.zip'));
+        assert.ok(!zipPattern.test('server.jar'));
+        assert.ok(!zipPattern.test('library.zip'));
+        assert.ok(!zipPattern.test('my-app.zip'));
     });
 });

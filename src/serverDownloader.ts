@@ -3,6 +3,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
+import * as child_process from "child_process";
 import got from 'got';
 import { promisify } from 'node:util';
 import * as stream from 'stream';
@@ -159,9 +160,59 @@ export class ServerDownloader {
     }
 
     /**
-     * Downloads the server jar file with VS Code progress notification
+     * Extracts the server distribution archive to the install directory
+     * and returns the path to the server script
+     * Returns a tuple of [serverScriptPath, storedFilename] where storedFilename
+     * is what should be saved in SERVER-INFO
      */
-    private async downloadServer(downloadUrl: string, version: string): Promise<string> {
+    private async extractServer(archivePath: string, version: string): Promise<{ serverScriptPath: string; storedFilename: string }> {
+        const extractDir = path.join(this.installDir, `v${version}`);
+        
+        await vscode.window.withProgress({
+            cancellable: true,
+            location: vscode.ProgressLocation.Notification,
+            title: `Extracting ${this.displayName} ${version}`
+        }, async (progress, token) => {
+            progress.report({ message: `Extracting ${this.displayName} ${version}...` });
+            
+            const fileName = path.basename(archivePath);
+            
+            return new Promise<void>((resolve, reject) => {
+                if (fileName.endsWith('.zip')) {
+                    // Ensure extract directory exists
+                    fs.mkdirSync(extractDir, { recursive: true });
+                    // Extract zip using unzip command
+                    const unzipProcess = child_process.spawn('unzip', [
+                        '-o', archivePath, '-d', extractDir
+                    ]);
+                    
+                    unzipProcess.on('close', (code) => {
+                        if (code === 0) {
+                            resolve();
+                        } else {
+                            reject(new Error(`unzip failed with code ${code}`));
+                        }
+                    });
+                    
+                    unzipProcess.on('error', (err) => {
+                        reject(err);
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        });
+        
+        // Return the bin/jmltk-lsp script and the versioned path
+        const serverScript = path.join(extractDir, 'bin', 'jmltk-lsp');
+        return { serverScriptPath: serverScript, storedFilename: `v${version}/bin/jmltk-lsp` };
+    }
+
+    /**
+     * Downloads the server distribution with VS Code progress notification
+     * Returns a tuple of [serverScriptPath, storedFilename]
+     */
+    private async downloadServer(downloadUrl: string, version: string): Promise<{ serverScriptPath: string; storedFilename: string }> {
         if (!(await fsExists(this.installDir))) {
             await fs.promises.mkdir(this.installDir, { recursive: true });
         }
@@ -184,14 +235,15 @@ export class ServerDownloader {
                 });
             });
 
-            progress.report({ message: `Initializing ${this.displayName} ${version}...` });
+            progress.report({ message: `Extracting ${this.displayName} ${version}...` });
         });
 
-        return destPath;
+        // Extract the downloaded archive and return path to server script
+        return this.extractServer(destPath, version);
     }
 
     /**
-     * Downloads the server if needed and returns the path to the jar file
+     * Downloads the server if needed and returns the path to the server script
      */
     async downloadServerIfNeeded(): Promise<string> {
         const serverInfo = await this.installedServerInfo();
@@ -218,7 +270,7 @@ export class ServerDownloader {
                 } else {
                     // User might be offline, use existing installation
                     console.warn(message);
-                    return path.join(this.installDir, serverInfo.filename);
+                    return path.join(this.installDir, serverInfoOrDefault.filename);
                 }
             }
 
@@ -233,7 +285,7 @@ export class ServerDownloader {
                 
                 if (serverAsset) {
                     const downloadUrl = serverAsset.browser_download_url;
-                    const downloadedPath = await this.downloadServer(
+                    const { serverScriptPath, storedFilename } = await this.downloadServer(
                         downloadUrl, 
                         latestVersion
                     );
@@ -241,14 +293,14 @@ export class ServerDownloader {
                     await this.updateInstalledServerInfo({
                         version: latestVersion,
                         lastUpdate: Date.now(),
-                        filename: serverAsset.name
+                        filename: storedFilename
                     });
 
                     vscode.window.showInformationMessage(
                         `${this.displayName} ${latestVersion} downloaded successfully!`
                     );
                     
-                    return downloadedPath;
+                    return serverScriptPath;
                 } else {
                     throw new Error(
                         `Latest GitHub release for ${this.githubOwner}/${this.githubRepo} ` +
@@ -258,7 +310,7 @@ export class ServerDownloader {
             }
         }
         
-        // Return existing installation
+        // Return existing installation - filename now stores the relative path to the script
         const filename = serverInfo?.filename || serverInfoOrDefault.filename;
         return path.join(this.installDir, filename);
     }
