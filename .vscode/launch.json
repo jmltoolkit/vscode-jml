@@ -7,7 +7,8 @@
             "type": "extensionHost",
             "request": "launch",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--set=jmltk.serverScript=${workspaceFolder}/../lsp/bin/jmltk-lsp"
             ],
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"

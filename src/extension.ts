@@ -8,21 +8,17 @@ import * as vscode from 'vscode';
 import { workspace, Disposable, ExtensionContext, window } from 'vscode';
 import { LanguageClient, LanguageClientOptions, StreamInfo } from 'vscode-languageclient/node';
 
-import { globby } from 'globby';
 import { ServerDownloader } from "./serverDownloader";
 
 
 export function activate(context: ExtensionContext) {
-    const config = workspace.getConfiguration("jmltk");
-    if (config.get("lspDisabled") !== true) {
-        context.subscriptions.push(
-            activateLanguageServer(context)
-        );
-    }
+    context.subscriptions.push(
+        activateLanguageServer(context)
+    );
 }
 
 function activateLanguageServer(context: ExtensionContext): Disposable {
-    const output = window.createOutputChannel("JMLTK Language Server", { log: true });
+    const output = window.createOutputChannel("JMLtk Language Server", { log: true });
 
     function createServer(): Promise<StreamInfo> {
         return new Promise((resolve, reject) => {
@@ -47,13 +43,17 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
                     let options = { cwd: workspace.rootPath };
 
                     let args: string[] = [
-                        scriptPath, "--mode", "client",
-                        "--port", (server.address() as net.AddressInfo).port.toString()
+                        "--client", (server.address() as net.AddressInfo).port.toString()
                     ];
 
                     console.log("Starting JML: " + scriptPath + " " + args);
 
                     let process = child_process.spawn(scriptPath, args, options);
+
+                    process.on('error', err => {
+                        server.close();
+                        reject(err);
+                    });
 
                     // Send raw output to storage path
                     const storagePath = context.storageUri?.fsPath;
@@ -73,21 +73,22 @@ function activateLanguageServer(context: ExtensionContext): Disposable {
 
     // Options to control the language client
     let clientOptions: LanguageClientOptions = {
-        documentSelector: ['java'],
+         documentSelector: [
+            { scheme: 'file', language: 'java' },
+            { scheme: 'file', language: 'key' }        
+        ],
         synchronize: {
             configurationSection: 'jmltk',
             fileEvents: workspace.createFileSystemWatcher('**/*.{java,jml}')
-        },
-        // Enable semantic tokens support from the language server
-        initializationOptions: {
-            semanticTokens: true
-        }
+        },        
+        outputChannel: output,
+        initializationOptions: {}
     };
 
     // Create the language client and start the client.
-    let client = new LanguageClient('jmltk', 'JMLTK Language Server', createServer, clientOptions);
+    let client = new LanguageClient('jmltk', 'JMLtk Language Server', createServer, clientOptions);
     let disposable = client.start();
-    context.subscriptions.push(output);
+    context.subscriptions.push(output, client);
     return client;
 }
 
@@ -108,7 +109,12 @@ async function findServerScript(context: ExtensionContext): Promise<string> {
     potentialPaths.push(
         path.join(context.extensionPath, '..', 'lsp', 'bin', 'jmltk-lsp')
     );
-    
+
+    potentialPaths.push(
+        path.join(context.extensionPath, '..', 'javaparser', 'tools', 'cli', 'build', 'install','jmltk', 'bin', 'jmltk-lsp')
+    );
+
+
     // 3. Storage path (VS Code extension storage)
     if (storagePath) {
         potentialPaths.push(path.join(storagePath, "lsp", "bin", "jmltk-lsp"));
@@ -117,8 +123,7 @@ async function findServerScript(context: ExtensionContext): Promise<string> {
     // 4. User home directory
     const homeDir = process.env.HOME || process.env.USERPROFILE;
     if (homeDir) {
-        potentialPaths.push(path.join(homeDir, ".jml-lsp", "bin", "jmltk-lsp"));
-        potentialPaths.push(path.join(homeDir, ".jmltk", "lsp", "bin", "jmltk-lsp"));
+        potentialPaths.push(path.join(homeDir, ".jmltk-lsp", "bin", "jmltk-lsp"));
     }
 
     // Search each potential path

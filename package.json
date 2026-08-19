@@ -1,6 +1,6 @@
 {
-    "name": "jml-vscode",
-    "displayName": "jml-vscode",
+    "name": "vscode-jml",
+    "displayName": "vscode-jml",
     "description": "VS Code support for Java Modelling Language",
     "license": "GPL-3.0-only",
     "version": "0.3.0",
@@ -9,7 +9,7 @@
         "vscode": ">=1.69.0"
     },
     "repository": {
-        "url": "http://github.com/wadoon/jml-vscode",
+        "url": "http://github.com/jmltoolkit/vscode-jml",
         "type": "git"
     },
     "categories": [
@@ -18,13 +18,8 @@
     ],
     "contributes": {
         "configuration": {
-            "title": "Java Modelling Language Toolkit (JMLTK)",
+            "title": "Java Modelling Language Toolkit (JMLtk)",
             "properties": {
-                "jmltk.lspDisabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "If set to true, the language server is NOT activated."
-                },
                 "jmltk.serverScript": {
                     "type": [
                         "string",
@@ -77,21 +72,27 @@
                 "path": "./snippets/key-snippets.json"
             }
         ],
-        "semanticTokenScopes": [
+        "semanticTokenTypes": [
             {
                 "id": "jmlmodifier",
-                "superType": "other",
-                "description": "JML Modifier",
-                "scopes": {}
-            },
+                "description": "JML Modifier"
+            }
+        ],
+        "semanticTokenScopes": [
             {
+                "language": "java",
                 "scopes": {
                     "jmlmodifier": [
                         "storage.modifier.java"
                     ]
                 }
             }
-        ]
+        ],
+        "configurationDefaults": {
+            "[java]": {
+                "editor.semanticHighlighting.enabled": true
+            }
+        }
     },
     "main": "./dist/extension.js",
     "activationEvents": [
@@ -106,28 +107,25 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "package": "vsce package",
-        "antlr4ts": "antlr4ts src/JML.g4 src/Key.g4 src/KeYJava.g4",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js"
     },
-    "devDependencies": {
-        "@types/mocha": "10.0.10",
-        "@types/node": "26.2.0",
-        "@types/vscode": "^1.118.0",
-        "@typescript-eslint/eslint-plugin": "8.67.0",
-        "@typescript-eslint/parser": "8.67.0",
-        "antlr4ts-cli": "0.5.0-alpha.4",
-        "esbuild": "^0.28.0",
-        "eslint": "10.8.1",
-        "mocha": "^11.3.0",
-        "typescript": "7.0.2",
-        "vsce": "^2.15.0",
-        "vscode-languageclient": "^10.1.0"
-    },
     "dependencies": {
-        "antlr4ts": "^0.5.0-alpha.4",
-        "globby": "^16.2.0",
-        "got": "^15.0.5"
+        "globby": "^16.2.3",
+        "got": "^15.1.0"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^26.2.0",
+        "@types/vscode": "^1.125.0",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.1.0",
+        "@vscode/vsce": "^3.9.2",
+        "esbuild": "^0.28.2",
+        "eslint": "^10.8.1",
+        "mocha": "^11.3.0",
+        "typescript": "^7.0.2",
+        "vscode-languageclient": "^10.1.0"
     }
 }
